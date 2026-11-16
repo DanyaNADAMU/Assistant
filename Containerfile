@@ -3,13 +3,16 @@ FROM debian:bookworm-slim AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
-    UV_LINK_MODE=copy
+    UV_LINK_MODE=copy \
+    UV_PYTHON_INSTALL_DIR=/opt/uv/python \
+    PATH="/app/.venv/bin:$PATH"
 
-# Install runtime dependencies: ffmpeg, libmagic1, ca-certificates
+# Install runtime dependencies: ffmpeg, libmagic1, ca-certificates, curl
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libmagic1 \
     ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv from official binary
@@ -20,10 +23,13 @@ RUN groupadd -g 1000 apps && useradd -u 1000 -g apps -m -s /bin/bash apps
 
 WORKDIR /app
 
+# Prepare python directory
+RUN mkdir -p /opt/uv/python
+
 # Copy dependency specifications first for layer caching
 COPY pyproject.toml uv.lock ./
 
-# Install production dependencies
+# Install production dependencies and python toolchain
 RUN uv sync --frozen --no-dev
 
 # Copy application source code
@@ -34,8 +40,8 @@ COPY README.md ./
 RUN uv sync --frozen --no-dev
 
 # Set ownership
-RUN chown -R apps:apps /app
+RUN chown -R apps:apps /app /opt/uv
 
 USER apps
 
-ENTRYPOINT ["uv", "run", "summary-bot", "tg-serve"]
+ENTRYPOINT ["summary-bot", "tg-serve"]
