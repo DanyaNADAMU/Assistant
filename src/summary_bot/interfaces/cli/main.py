@@ -17,6 +17,7 @@ from summary_bot.adapters.openrouter.client import OpenRouterClient
 from summary_bot.config import TaskCategory, settings
 from summary_bot.core.models.payload import InputPayload, PayloadKind
 from summary_bot.core.services.runner import ResilientModelRunner
+from summary_bot.interfaces.telegram.bot import start_telegram_bot
 
 app = typer.Typer(
     name="summary-bot",
@@ -113,6 +114,13 @@ def models() -> None:
         table.add_row(cat.value, primary, fallback)
 
     console.print(table)
+
+
+@app.command("tg-serve")
+def tg_serve() -> None:
+    """Launch the Telegram Bot long-polling daemon service."""
+    console.print("[bold cyan]Запуск сервиса Telegram бота SummaryBot...[/bold cyan]")
+    asyncio.run(start_telegram_bot())
 
 
 if __name__ == "__main__":

@@ -1,0 +1,74 @@
+"""Telegram bot runner and dispatcher initialization."""
+
+import asyncio
+import logging
+
+from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
+
+from summary_bot.adapters.extractors.audio import AudioExtractor
+from summary_bot.adapters.extractors.document import DocumentExtractor
+from summary_bot.adapters.extractors.web import WebExtractor
+from summary_bot.adapters.openrouter.client import OpenRouterClient
+from summary_bot.config import Settings, settings
+from summary_bot.core.services.runner import ResilientModelRunner
+from summary_bot.interfaces.telegram.handlers.commands import router as commands_router
+from summary_bot.interfaces.telegram.handlers.media import router as media_router
+
+logger = logging.getLogger(__name__)
+
+
+def create_dispatcher(runner: ResilientModelRunner) -> Dispatcher:
+    """Create and configure aiogram Dispatcher with registered dependency workflow."""
+    dp = Dispatcher()
+
+    # Pass runner dependency to all handler calls
+    dp["runner"] = runner
+
+    # Register routers (commands must be first to intercept /start, /help, /models)
+    dp.include_router(commands_router)
+    dp.include_router(media_router)
+
+    return dp
+
+
+async def start_telegram_bot(custom_settings: Settings | None = None) -> None:
+    """Start polling loop for SummaryBot Telegram bot."""
+    active_settings = custom_settings or settings
+
+    if not active_settings.telegram_bot_token:
+        raise ValueError("TELEGRAM_BOT_TOKEN is not configured in settings or environment.")
+
+    bot = Bot(
+        token=active_settings.telegram_bot_token,
+        default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN),
+    )
+
+    gateway = OpenRouterClient(settings=active_settings)
+    extractors = [AudioExtractor(), DocumentExtractor(), WebExtractor()]
+    runner = ResilientModelRunner(gateway=gateway, settings=active_settings, extractors=extractors)
+
+    dp = create_dispatcher(runner)
+
+    logger.info("Starting Telegram Bot polling loop...")
+    try:
+        # Drop pending updates to avoid backlog on restart
+        await bot.delete_webhook(drop_pending_updates=True)
+        await dp.start_polling(bot)
+    finally:
+        await bot.session.close()
+        logger.info("Telegram Bot session closed.")
+
+
+def run_bot() -> None:
+    """Synchronous entry point for running the Telegram bot."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
+    asyncio.run(start_telegram_bot())
+
+
+if __name__ == "__main__":
+    run_bot()
