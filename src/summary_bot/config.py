@@ -2,7 +2,7 @@
 
 from enum import StrEnum
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -44,6 +44,13 @@ class Settings(BaseSettings):
 
     # Telegram settings
     telegram_bot_token: str = Field(default="", alias="TELEGRAM_BOT_TOKEN")
+
+    @field_validator("telegram_bot_token", "openrouter_api_key", mode="before")
+    @classmethod
+    def sanitize_secrets(cls, v: str | None) -> str | None:
+        if isinstance(v, str):
+            return v.strip().strip("\"'")
+        return v
 
     # Primary and Fallback model mapping
     model_audio_primary: str = Field(
