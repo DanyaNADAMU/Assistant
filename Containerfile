@@ -27,16 +27,15 @@ WORKDIR /app
 RUN mkdir -p /opt/uv/python
 
 # Copy dependency specifications first for layer caching
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
 
-# Install production dependencies and python toolchain
-RUN uv sync --frozen --no-dev
+# Install production dependencies (without project itself yet)
+RUN uv sync --frozen --no-dev --no-install-project
 
 # Copy application source code
 COPY src ./src
-COPY README.md ./
 
-# Re-sync to install the summary-bot package itself
+# Install summary-bot project into virtualenv
 RUN uv sync --frozen --no-dev
 
 # Set ownership
