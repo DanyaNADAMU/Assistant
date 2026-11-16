@@ -37,11 +37,12 @@ async def start_telegram_bot(custom_settings: Settings | None = None) -> None:
     """Start polling loop for SummaryBot Telegram bot."""
     active_settings = custom_settings or settings
 
-    if not active_settings.telegram_bot_token:
-        raise ValueError("TELEGRAM_BOT_TOKEN is not configured in settings or environment.")
+    token = active_settings.effective_bot_token
+    if not token:
+        raise ValueError("Neither TELEGRAM_BOT_TOKEN nor TEST_TELEGRAM_BOT_TOKEN is configured.")
 
     bot = Bot(
-        token=active_settings.telegram_bot_token,
+        token=token,
         default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN),
     )
 

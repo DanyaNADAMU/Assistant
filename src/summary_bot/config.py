@@ -42,15 +42,26 @@ class Settings(BaseSettings):
         default="SummaryBot", alias="OPENROUTER_APP_TITLE"
     )
 
+    # Environment mode (production, staging, test)
+    environment: str = Field(default="production", alias="ENVIRONMENT")
+
     # Telegram settings
     telegram_bot_token: str = Field(default="", alias="TELEGRAM_BOT_TOKEN")
+    test_telegram_bot_token: str = Field(default="", alias="TEST_TELEGRAM_BOT_TOKEN")
 
-    @field_validator("telegram_bot_token", "openrouter_api_key", mode="before")
+    @field_validator("telegram_bot_token", "test_telegram_bot_token", "openrouter_api_key", mode="before")
     @classmethod
     def sanitize_secrets(cls, v: str | None) -> str | None:
         if isinstance(v, str):
             return v.strip().strip("\"'")
         return v
+
+    @property
+    def effective_bot_token(self) -> str:
+        """Resolve active Telegram bot token based on environment."""
+        if self.environment.lower() in ("test", "staging", "dev", "development") and self.test_telegram_bot_token:
+            return self.test_telegram_bot_token
+        return self.telegram_bot_token or self.test_telegram_bot_token
 
     # Primary and Fallback model mapping
     model_audio_primary: str = Field(

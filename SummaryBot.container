@@ -1,14 +1,13 @@
 [Unit]
 Description=SummaryBot Multimodal Telegram Bot Daemon
 Documentation=https://git.nada.mu/NADAMU/SummaryBot
-After=network-online.target apps-proxy-gateway.service
-Requires=apps-proxy-gateway.service
+After=network-online.target
+Wants=network-online.target
 
 [Container]
 ContainerName=SummaryBot
-Image=localhost/summary-bot:latest
-EnvironmentFile=/home/apps/stacks/SummaryBot/.env
-Network=container:apps-proxy-gateway
+Image=git.nada.mu/NADAMU/summary-bot:latest
+EnvironmentFile=%h/stacks/SummaryBot/.env
 
 [Service]
 Restart=always
