@@ -1,0 +1,14 @@
+[Unit]
+Description=SummaryBot Multimodal Telegram Bot Daemon
+After=network-online.target apps-proxy-gateway.service
+Requires=apps-proxy-gateway.service
+
+[Container]
+ContainerName=SummaryBot
+Image=localhost/summary-bot:latest
+EnvironmentFile=/home/apps/stacks/SummaryBot/.env
+Network=container:apps-proxy-gateway
+Restart=always
+
+[Install]
+WantedBy=default.target
