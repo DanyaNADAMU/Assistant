@@ -68,7 +68,28 @@ Trajectory: Core-First Multimodal Ingestion Pipeline
 - [x] Add user-facing bilingual documentation (`docs/en/` and `docs/ru/`)
 
 ## Phase 7: Deployment to Staging (`berg-test`)
-- [ ] Prepare testbed staging configuration on `berg-test` under user `apps`:
-  - Set up dedicated `apps-proxy-gateway`
-  - Deploy `SummaryBot` Quadlet unit
-- [ ] Run end-to-end smoke test on staging
+- [x] Prepare testbed staging configuration on `berg-test` under user `apps`:
+  - [x] Set up dedicated `apps-proxy-gateway` (AmneziaWG via Frankfurt node)
+  - [x] Deploy `SummaryBot` Quadlet unit in user session
+- [x] Run end-to-end smoke test on staging (Telegram polling, OpenRouter connectivity verified)
+
+---
+
+## Phase 8: Hardening, Enhancements & Production Readiness
+- [ ] **Access Control & Anti-Abuse**:
+  - Whitelist mode (`ALLOWED_TELEGRAM_USERS`) or per-user daily quota
+  - Graceful rejection messages for unauthorized users
+- [ ] **Interactive Follow-Up Q&A (Contextual Dialog)**:
+  - Ability to reply to a summary message with follow-up questions
+  - In-memory or Redis/SQLite context window tracking
+- [ ] **Content Caching & Dedup**:
+  - Hash-based deduplication for files and URLs (skip redundant LLM API calls)
+  - SQLite/PostgreSQL storage for usage analytics and token spend
+- [ ] **Text-to-Speech (TTS) Summaries**:
+  - Optional audio summary playback via Edge-TTS / ElevenLabs / OpenRouter
+- [ ] **CI/CD & Git Maintenance**:
+  - Pull Request review on Forgejo (`feat/foundation-and-core` -> `main`)
+  - Forgejo Actions test runner pipeline
+  - Bitcoin OTS synchronization
+- [ ] **Production Rollout Gate**:
+  - Await explicit user prompt string `"sdsd"` before deploying to production infrastructure
