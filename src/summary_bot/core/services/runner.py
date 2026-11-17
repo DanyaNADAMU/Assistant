@@ -5,12 +5,12 @@ import time
 from collections.abc import Sequence
 
 from summary_bot.config import Settings, TaskCategory
-from summary_bot.core.models.payload import InputPayload
+from summary_bot.core.models.payload import InputPayload, PayloadKind
 from summary_bot.core.models.result import ProcessingResult
 from summary_bot.core.ports.extractor import MediaExtractorPort
 from summary_bot.core.ports.model_gateway import ModelGatewayPort
 from summary_bot.core.services.detector import CategoryDetector
-from summary_bot.core.services.prompts import get_prompt_for_category
+from summary_bot.core.services.prompts import get_prompt_for_category, get_refinement_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -99,3 +99,36 @@ class ResilientModelRunner:
                 fallback_error,
             )
             raise fallback_error
+
+    async def refine(
+        self,
+        source_content: str,
+        action: str,
+        category: TaskCategory = TaskCategory.TEXT_DOCS,
+    ) -> str:
+        """Execute a secondary refinement action (e.g. TL;DR, action items, deep dive, translation)."""
+        prompt = get_refinement_prompt(action)
+        payload = InputPayload(kind=PayloadKind.TEXT, text=source_content)
+        primary_model, fallback_model = self._settings.get_models_for_category(category)
+
+        try:
+            result = await self._gateway.execute(
+                payload=payload,
+                model=primary_model,
+                system_prompt=prompt,
+            )
+            return result.summary
+        except Exception as primary_error:
+            logger.warning(
+                "Primary model '%s' failed for refinement '%s': %s. Retrying fallback '%s'",
+                primary_model,
+                action,
+                primary_error,
+                fallback_model,
+            )
+            result = await self._gateway.execute(
+                payload=payload,
+                model=fallback_model,
+                system_prompt=prompt,
+            )
+            return result.summary

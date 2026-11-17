@@ -9,8 +9,10 @@ from aiogram.types import Message
 
 from summary_bot.config import settings
 from summary_bot.core.models.payload import InputPayload, PayloadKind
+from summary_bot.core.services.context_store import SummaryContext, context_store
 from summary_bot.core.services.runner import ResilientModelRunner
 from summary_bot.interfaces.telegram.downloader import FileTooLargeError, download_telegram_file
+from summary_bot.interfaces.telegram.keyboards import get_summary_keyboard
 
 logger = logging.getLogger(__name__)
 router = Router(name="media")
@@ -35,17 +37,41 @@ async def _execute_and_reply(
         result = await runner.run(payload)
         formatted_text = result.format_telegram_message()
 
+        # Build context for interactive buttons
+        source_content = result.transcription or result.summary
+        if result.key_takeaways:
+            source_content += "\n\n" + "\n".join(result.key_takeaways)
+
+        ctx = SummaryContext.create(
+            original_text=formatted_text,
+            source_content=source_content,
+            summary=result.summary,
+            transcription=result.transcription,
+            key_takeaways=result.key_takeaways,
+            category=result.category,
+            model_used=result.model_used,
+        )
+        await context_store.put(ctx)
+        reply_markup = get_summary_keyboard(
+            cid=ctx.cid,
+            active_view="orig",
+            has_transcription=bool(result.transcription),
+        )
+
         # Split message if it exceeds Telegram's 4096 character limit
         if len(formatted_text) <= MAX_TELEGRAM_MESSAGE_LENGTH:
-            await status_msg.edit_text(formatted_text, parse_mode="Markdown")
+            await status_msg.edit_text(
+                formatted_text, parse_mode="Markdown", reply_markup=reply_markup
+            )
         else:
             await status_msg.delete()
             chunks = [
                 formatted_text[i : i + MAX_TELEGRAM_MESSAGE_LENGTH]
                 for i in range(0, len(formatted_text), MAX_TELEGRAM_MESSAGE_LENGTH)
             ]
-            for chunk in chunks:
-                await message.reply(chunk, parse_mode="Markdown")
+            for idx, chunk in enumerate(chunks):
+                markup = reply_markup if idx == len(chunks) - 1 else None
+                await message.reply(chunk, parse_mode="Markdown", reply_markup=markup)
     except Exception as exc:
         logger.exception("Failed to process message %s: %s", message.message_id, exc)
         await status_msg.edit_text(

@@ -13,6 +13,7 @@ from summary_bot.adapters.extractors.web import WebExtractor
 from summary_bot.adapters.openrouter.client import OpenRouterClient
 from summary_bot.config import Settings, settings
 from summary_bot.core.services.runner import ResilientModelRunner
+from summary_bot.interfaces.telegram.handlers.callbacks import router as callbacks_router
 from summary_bot.interfaces.telegram.handlers.commands import router as commands_router
 from summary_bot.interfaces.telegram.handlers.media import router as media_router
 
@@ -28,6 +29,7 @@ def create_dispatcher(runner: ResilientModelRunner) -> Dispatcher:
 
     # Register routers (commands must be first to intercept /start, /help, /models)
     dp.include_router(commands_router)
+    dp.include_router(callbacks_router)
     dp.include_router(media_router)
 
     return dp
