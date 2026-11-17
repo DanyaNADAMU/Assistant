@@ -16,6 +16,7 @@ class ProcessingResult(BaseModel):
     used_fallback: bool = False
     from_cache: bool = False
     duration_seconds: float = 0.0
+    audio_duration_seconds: float | None = None
     tokens_prompt: int | None = None
     tokens_completion: int | None = None
     original_media_type: str | None = None
@@ -27,8 +28,12 @@ class ProcessingResult(BaseModel):
         # If audio/video was transcribed, show transcription first
         if self.transcription:
             clean_transcript = self.transcription.strip()
-            # If transcription is very long, format it nicely
-            parts.append(f"🎙️ **Расшифровка (STT)**:\n{clean_transcript}\n")
+            header = "🎙️ **Расшифровка (STT)**"
+            if self.audio_duration_seconds is not None and self.audio_duration_seconds > 0:
+                mins = int(self.audio_duration_seconds // 60)
+                secs = int(self.audio_duration_seconds % 60)
+                header += f" `[⏱ {mins:02d}:{secs:02d}]`"
+            parts.append(f"{header}:\n{clean_transcript}\n")
 
         # Summary header & body
         parts.append(f"📝 **Саммари**:\n{self.summary.strip()}")

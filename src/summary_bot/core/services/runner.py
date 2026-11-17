@@ -74,6 +74,20 @@ class ResilientModelRunner:
                         exc,
                     )
 
+        # Immediate friendly response for silence-only recordings
+        if current_payload.metadata.get("is_silent"):
+            logger.info("Payload detected as pure silence; returning immediate friendly response")
+            orig_dur = current_payload.metadata.get("original_duration", 0.0)
+            return ProcessingResult(
+                category=TaskCategory.AUDIO_VIDEO,
+                summary="Аудиозапись не содержит слышимой речи (тишина или неразборчивый шум).",
+                transcription=None,
+                key_takeaways=[],
+                model_used="local/vad-silence-filter",
+                audio_duration_seconds=orig_dur,
+                duration_seconds=time.perf_counter() - start_time,
+            )
+
         # Step 2: Determine task category and appropriate prompt
         category: TaskCategory = CategoryDetector.detect(current_payload)
         system_prompt = get_prompt_for_category(category, preferences=preferences)
@@ -127,6 +141,12 @@ class ResilientModelRunner:
                     fallback_error,
                 )
                 raise fallback_error
+
+        if result is not None:
+            if "duration_seconds" in current_payload.metadata:
+                result.audio_duration_seconds = float(current_payload.metadata["duration_seconds"])
+            elif "original_duration" in current_payload.metadata:
+                result.audio_duration_seconds = float(current_payload.metadata["original_duration"])
 
         # Step 5: Store successful result in persistent cache
         if result is not None and self._cache is not None:
