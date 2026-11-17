@@ -15,9 +15,7 @@ logger = logging.getLogger(__name__)
 SUPPORTED_DOC_EXTENSIONS = frozenset(
     {".pdf", ".docx", ".txt", ".md", ".rtf", ".csv", ".log", ".json", ".yaml", ".yml"}
 )
-IMAGE_EXTENSIONS = frozenset(
-    {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif", ".tiff", ".tif"}
-)
+IMAGE_EXTENSIONS = frozenset({".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif", ".tiff", ".tif"})
 
 
 class DocumentExtractor(MediaExtractorPort):

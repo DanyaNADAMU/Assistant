@@ -2,5 +2,19 @@
 
 from summary_bot.core.models.payload import InputPayload, PayloadKind
 from summary_bot.core.models.result import ProcessingResult
+from summary_bot.core.models.user_preferences import (
+    OutputFormat,
+    OutputLanguage,
+    SummaryDepth,
+    UserPreferences,
+)
 
-__all__ = ["InputPayload", "PayloadKind", "ProcessingResult"]
+__all__ = [
+    "InputPayload",
+    "OutputFormat",
+    "OutputLanguage",
+    "PayloadKind",
+    "ProcessingResult",
+    "SummaryDepth",
+    "UserPreferences",
+]

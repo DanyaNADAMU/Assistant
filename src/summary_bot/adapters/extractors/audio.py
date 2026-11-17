@@ -47,13 +47,13 @@ class AudioExtractor(MediaExtractorPort):
             "-y",
             "-i",
             str(source_path),
-            "-vn",              # Disable video recording
+            "-vn",  # Disable video recording
             "-ac",
-            "1",                # Mono
+            "1",  # Mono
             "-ar",
-            "16000",            # 16kHz sample rate
+            "16000",  # 16kHz sample rate
             "-b:a",
-            "64k",              # 64kbps bitrate
+            "64k",  # 64kbps bitrate
             "-f",
             "mp3",
             str(out_path),

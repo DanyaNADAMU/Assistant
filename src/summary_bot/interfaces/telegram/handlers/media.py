@@ -7,6 +7,7 @@ from aiogram import Bot, F, Router
 from aiogram.enums import ChatAction
 from aiogram.types import Message
 
+from summary_bot.adapters.storage import preferences_repo
 from summary_bot.config import settings
 from summary_bot.core.models.payload import InputPayload, PayloadKind
 from summary_bot.core.services.context_store import SummaryContext, context_store
@@ -34,7 +35,9 @@ async def _execute_and_reply(
 ) -> None:
     """Execute runner and send formatted results to user, handling message length limits."""
     try:
-        result = await runner.run(payload)
+        user_id = message.from_user.id if message.from_user else message.chat.id
+        prefs = await preferences_repo.get(user_id)
+        result = await runner.run(payload, preferences=prefs)
         formatted_text = result.format_telegram_message()
 
         # Build context for interactive buttons
@@ -85,7 +88,9 @@ async def handle_voice(message: Message, bot: Bot, runner: ResilientModelRunner)
     """Handle voice messages."""
     assert message.voice is not None
     await bot.send_chat_action(message.chat.id, ChatAction.RECORD_VOICE)
-    status_msg = await message.reply("⏳ *Слушаю и расшифровываю голосовое...*", parse_mode="Markdown")
+    status_msg = await message.reply(
+        "⏳ *Слушаю и расшифровываю голосовое...*", parse_mode="Markdown"
+    )
 
     try:
         async with download_telegram_file(
@@ -161,7 +166,9 @@ async def handle_video(message: Message, bot: Bot, runner: ResilientModelRunner)
     """Handle video files."""
     assert message.video is not None
     await bot.send_chat_action(message.chat.id, ChatAction.RECORD_VIDEO)
-    status_msg = await message.reply("⏳ *Извлекаю звук и анализирую видео...*", parse_mode="Markdown")
+    status_msg = await message.reply(
+        "⏳ *Извлекаю звук и анализирую видео...*", parse_mode="Markdown"
+    )
 
     try:
         async with download_telegram_file(
@@ -202,9 +209,7 @@ async def handle_document(message: Message, bot: Bot, runner: ResilientModelRunn
         ".tiff",
     )
     status_text = (
-        "⏳ *Анализирую изображение...*"
-        if is_image
-        else "⏳ *Читаю и структурирую документ...*"
+        "⏳ *Анализирую изображение...*" if is_image else "⏳ *Читаю и структурирую документ...*"
     )
     status_msg = await message.reply(status_text, parse_mode="Markdown")
 

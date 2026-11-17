@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from summary_bot.config import Settings, TaskCategory
 from summary_bot.core.models.payload import InputPayload, PayloadKind
 from summary_bot.core.models.result import ProcessingResult
+from summary_bot.core.models.user_preferences import UserPreferences
 from summary_bot.core.ports.extractor import MediaExtractorPort
 from summary_bot.core.ports.model_gateway import ModelGatewayPort
 from summary_bot.core.services.detector import CategoryDetector
@@ -28,7 +29,9 @@ class ResilientModelRunner:
         self._settings = settings
         self._extractors = list(extractors or [])
 
-    async def run(self, payload: InputPayload) -> ProcessingResult:
+    async def run(
+        self, payload: InputPayload, preferences: UserPreferences | None = None
+    ) -> ProcessingResult:
         """Run payload through extraction, classification, and resilient model execution."""
         start_time = time.perf_counter()
 
@@ -48,7 +51,7 @@ class ResilientModelRunner:
 
         # Step 2: Determine task category and appropriate prompt
         category: TaskCategory = CategoryDetector.detect(current_payload)
-        system_prompt = get_prompt_for_category(category)
+        system_prompt = get_prompt_for_category(category, preferences=preferences)
         primary_model, fallback_model = self._settings.get_models_for_category(category)
 
         logger.info(

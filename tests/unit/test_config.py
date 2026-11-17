@@ -1,6 +1,5 @@
 """Tests for configuration settings and environment token resolution."""
 
-
 from summary_bot.config import Settings
 
 

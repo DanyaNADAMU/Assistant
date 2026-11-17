@@ -8,6 +8,7 @@ Wants=network-online.target
 ContainerName=SummaryBot
 Image=git.nada.mu/nadamu/summary-bot:latest
 EnvironmentFile=%h/stacks/SummaryBot/.env
+Volume=%h/stacks/SummaryBot/data:/app/data
 
 [Service]
 Restart=always

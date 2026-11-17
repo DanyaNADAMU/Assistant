@@ -6,9 +6,13 @@ from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery, Message
 
+from summary_bot.adapters.storage import preferences_repo
 from summary_bot.core.services.context_store import context_store
 from summary_bot.core.services.runner import ResilientModelRunner
-from summary_bot.interfaces.telegram.keyboards import get_summary_keyboard
+from summary_bot.interfaces.telegram.keyboards import (
+    get_settings_keyboard,
+    get_summary_keyboard,
+)
 
 logger = logging.getLogger(__name__)
 router = Router(name="callbacks")
@@ -123,3 +127,53 @@ async def handle_summary_action(callback: CallbackQuery, runner: ResilientModelR
     except Exception as exc:
         logger.exception("Failed to handle callback %s: %s", callback.data, exc)
         await callback.answer(f"❌ Ошибка: {exc}", show_alert=True)
+
+
+@router.callback_query(F.data.startswith("pref:"))
+async def handle_preference_toggle(callback: CallbackQuery) -> None:
+    """Handle interactive user preferences toggle buttons."""
+    if not callback.data or not callback.message or not isinstance(callback.message, Message):
+        await callback.answer()
+        return
+
+    user_id = callback.from_user.id
+    username = callback.from_user.username
+    setting = callback.data.removeprefix("pref:")
+
+    prefs = await preferences_repo.get(user_id)
+    toast = ""
+
+    match setting:
+        case "lang":
+            prefs.language = prefs.next_language()
+            toast = f"Язык изменен: {prefs.language.label}"
+        case "depth":
+            prefs.depth = prefs.next_depth()
+            toast = f"Глубина изменена: {prefs.depth.label}"
+        case "format":
+            prefs.format = prefs.next_format()
+            toast = f"Формат изменен: {prefs.format.label}"
+        case "actions":
+            prefs.include_action_items = not prefs.include_action_items
+            status = "включен" if prefs.include_action_items else "выключен"
+            toast = f"Список задач {status}"
+        case "reset":
+            prefs = await preferences_repo.reset(user_id)
+            toast = "Настройки сброшены по умолчанию"
+        case _:
+            await callback.answer("Неизвестный параметр")
+            return
+
+    if setting != "reset":
+        await preferences_repo.save(prefs)
+
+    card_text = prefs.format_settings_card(username=username)
+    markup = get_settings_keyboard(prefs)
+
+    try:
+        await callback.message.edit_text(card_text, parse_mode="Markdown", reply_markup=markup)
+    except TelegramBadRequest as err:
+        if "message is not modified" not in str(err).lower():
+            logger.warning("Failed to edit settings message: %s", err)
+
+    await callback.answer(toast)

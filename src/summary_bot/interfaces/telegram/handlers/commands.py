@@ -4,7 +4,9 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
+from summary_bot.adapters.storage import preferences_repo
 from summary_bot.config import TaskCategory, settings
+from summary_bot.interfaces.telegram.keyboards import get_settings_keyboard
 
 router = Router(name="commands")
 
@@ -22,6 +24,7 @@ WELCOME_MESSAGE = """👋 **Привет! Я SummaryBot.**
 Просто перешли или отправь мне любой контент!
 
 ⚙️ **Команды**:
+/settings — персональные настройки языка, глубины и формата
 /models — текущая матрица моделей (Primary / Fallback)
 /help — подробная справка
 """
@@ -60,3 +63,14 @@ async def cmd_models(message: Message) -> None:
         lines.append(f"• **{cat.value}**:\n  ├ Primary: `{primary}`\n  └ Fallback: `{fallback}`")
 
     await message.answer("\n".join(lines), parse_mode="Markdown")
+
+
+@router.message(Command("settings"))
+async def cmd_settings(message: Message) -> None:
+    """Display interactive settings card with preference toggles."""
+    user_id = message.from_user.id if message.from_user else message.chat.id
+    username = message.from_user.username if message.from_user else None
+    prefs = await preferences_repo.get(user_id)
+    card_text = prefs.format_settings_card(username=username)
+    markup = get_settings_keyboard(prefs)
+    await message.answer(card_text, parse_mode="Markdown", reply_markup=markup)

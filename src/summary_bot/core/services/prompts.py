@@ -1,6 +1,12 @@
 """System prompts for summarization and multimodal understanding."""
 
 from summary_bot.config import TaskCategory
+from summary_bot.core.models.user_preferences import (
+    OutputFormat,
+    OutputLanguage,
+    SummaryDepth,
+    UserPreferences,
+)
 
 PROMPT_AUDIO_VIDEO = """Ты — высококлассный ассистент по транскрипции и анализу аудио/видео.
 Твоя задача:
@@ -141,16 +147,57 @@ def get_refinement_prompt(action: str) -> str:
             return PROMPT_TEXT_DOCS
 
 
-def get_prompt_for_category(category: TaskCategory) -> str:
-    """Return the designated system prompt for a task category."""
+def get_prompt_for_category(
+    category: TaskCategory, preferences: UserPreferences | None = None
+) -> str:
+    """Return the designated system prompt for a task category, enriched with user preferences."""
     match category:
         case TaskCategory.AUDIO_VIDEO:
-            return PROMPT_AUDIO_VIDEO
+            base_prompt = PROMPT_AUDIO_VIDEO
         case TaskCategory.TEXT_DOCS:
-            return PROMPT_TEXT_DOCS
+            base_prompt = PROMPT_TEXT_DOCS
         case TaskCategory.VISION:
-            return PROMPT_VISION
+            base_prompt = PROMPT_VISION
         case TaskCategory.MICRO:
-            return PROMPT_MICRO
+            base_prompt = PROMPT_MICRO
         case TaskCategory.PRO:
-            return PROMPT_PRO
+            base_prompt = PROMPT_PRO
+
+    if preferences is None:
+        return base_prompt
+
+    additions: list[str] = []
+    if preferences.language == OutputLanguage.RU:
+        additions.append(
+            "Языковое требование: Твой ответ должен быть строго на чистом русском языке независимо от языка оригинала."
+        )
+    elif preferences.language == OutputLanguage.EN:
+        additions.append(
+            "Language requirement: Provide your complete response in clear, fluent English regardless of the input language."
+        )
+
+    if preferences.depth == SummaryDepth.CONCISE:
+        additions.append(
+            "Глубина изложения: Будь предельно лаконичен. Дай ультра-краткую суть (1-2 предложения) и не более 3 ключевых тезисов. Опусти второстепенные детали."
+        )
+    elif preferences.depth == SummaryDepth.DETAILED:
+        additions.append(
+            "Глубина изложения: Предоставь максимально детальный и всесторонний разбор с развернутыми пунктами, всеми важными фактами, цифрами и контекстом."
+        )
+
+    if preferences.format == OutputFormat.BULLETS:
+        additions.append(
+            "Форматирование: Отвечай только четким маркированным списком пунктов, избегай длинных связующих абзацев."
+        )
+
+    if preferences.include_action_items:
+        additions.append(
+            "Задачи и шаги: В конце ответа обязательно выдели отдельный блок '📋 **Список задач (Action Items)**' с практическими шагами."
+        )
+
+    if not additions:
+        return base_prompt
+
+    return f"{base_prompt}\n\nПользовательские предпочтения:\n" + "\n".join(
+        f"• {a}" for a in additions
+    )

@@ -77,7 +77,7 @@ runs:
 
         # 3. Ensure target stack and Quadlet directories exist
         echo "==> Ensuring target directories exist..."
-        ssh $SSH_OPTS "$SSH_TARGET" "mkdir -p ~/stacks/${{ inputs.service_name }} ~/.config/containers/systemd"
+        ssh $SSH_OPTS "$SSH_TARGET" "mkdir -p ~/stacks/${{ inputs.service_name }}/data ~/.config/containers/systemd"
 
         # 4. Deploy environment file if provided
         if [ -n "${{ inputs.env_content }}" ]; then

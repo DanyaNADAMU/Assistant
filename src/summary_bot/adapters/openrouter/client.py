@@ -90,7 +90,9 @@ class OpenRouterClient(ModelGatewayPort):
         data = response.json()
         choices = data.get("choices", [])
         if not choices:
-            raise OpenRouterAPIError(status_code=500, message="Empty choices received from OpenRouter")
+            raise OpenRouterAPIError(
+                status_code=500, message="Empty choices received from OpenRouter"
+            )
 
         content: str = choices[0].get("message", {}).get("content", "")
         usage = data.get("usage", {})
@@ -138,7 +140,10 @@ class OpenRouterClient(ModelGatewayPort):
                             **({"format": mime.split("/")[-1]} if "audio" in mime else {}),
                         },
                     },
-                    {"type": "text", "text": "Пожалуйста, расшифруй аудиодорожку и сделай подробное саммари."},
+                    {
+                        "type": "text",
+                        "text": "Пожалуйста, расшифруй аудиодорожку и сделай подробное саммари.",
+                    },
                 ]
 
         # 2. Visual payload (Photo, Sticker, GIF)
@@ -155,7 +160,10 @@ class OpenRouterClient(ModelGatewayPort):
                         "type": "image_url",
                         "image_url": {"url": f"data:{mime};base64,{b64_data}"},
                     },
-                    {"type": "text", "text": payload.text or "Опиши и сделай саммари этого изображения."},
+                    {
+                        "type": "text",
+                        "text": payload.text or "Опиши и сделай саммари этого изображения.",
+                    },
                 ]
 
         # 3. Text or document content

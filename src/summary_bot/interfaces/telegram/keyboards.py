@@ -3,6 +3,8 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from summary_bot.core.models.user_preferences import UserPreferences
+
 
 def get_summary_keyboard(
     cid: str,
@@ -43,5 +45,44 @@ def get_summary_keyboard(
         builder.row(
             InlineKeyboardButton(text="🎙️ Полный транскрипт", callback_data=f"act:{cid}:stt")
         )
+
+    return builder.as_markup()
+
+
+def get_settings_keyboard(preferences: UserPreferences) -> InlineKeyboardMarkup:
+    """Build interactive inline keyboard for user preferences toggling."""
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=f"🌐 Язык: {preferences.language.label}",
+            callback_data="pref:lang",
+        )
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text=f"📝 Глубина: {preferences.depth.label}",
+            callback_data="pref:depth",
+        )
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text=f"📐 Формат: {preferences.format.label}",
+            callback_data="pref:format",
+        )
+    )
+    action_status = "Вкл ✅" if preferences.include_action_items else "Выкл ❌"
+    builder.row(
+        InlineKeyboardButton(
+            text=f"📋 Список задач: {action_status}",
+            callback_data="pref:actions",
+        )
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="🔄 Сбросить по умолчанию",
+            callback_data="pref:reset",
+        )
+    )
 
     return builder.as_markup()

@@ -34,14 +34,24 @@ def _resolve_payload(target: str, is_pro: bool) -> InputPayload:
     if path.exists() and path.is_file():
         ext = path.suffix.lower()
         if ext in (".mp3", ".wav", ".ogg", ".oga", ".m4a", ".aac"):
-            return InputPayload(kind=PayloadKind.AUDIO, file_path=path, filename=path.name, is_pro=is_pro)
+            return InputPayload(
+                kind=PayloadKind.AUDIO, file_path=path, filename=path.name, is_pro=is_pro
+            )
         if ext in (".mp4", ".mov", ".mkv", ".webm", ".avi"):
-            return InputPayload(kind=PayloadKind.VIDEO, file_path=path, filename=path.name, is_pro=is_pro)
+            return InputPayload(
+                kind=PayloadKind.VIDEO, file_path=path, filename=path.name, is_pro=is_pro
+            )
         if ext in (".jpg", ".jpeg", ".png", ".webp", ".bmp"):
-            return InputPayload(kind=PayloadKind.IMAGE, file_path=path, filename=path.name, is_pro=is_pro)
+            return InputPayload(
+                kind=PayloadKind.IMAGE, file_path=path, filename=path.name, is_pro=is_pro
+            )
         if ext in (".pdf", ".docx", ".txt", ".md"):
-            return InputPayload(kind=PayloadKind.DOCUMENT, file_path=path, filename=path.name, is_pro=is_pro)
-        return InputPayload(kind=PayloadKind.DOCUMENT, file_path=path, filename=path.name, is_pro=is_pro)
+            return InputPayload(
+                kind=PayloadKind.DOCUMENT, file_path=path, filename=path.name, is_pro=is_pro
+            )
+        return InputPayload(
+            kind=PayloadKind.DOCUMENT, file_path=path, filename=path.name, is_pro=is_pro
+        )
 
     if target.startswith(("http://", "https://")):
         return InputPayload(kind=PayloadKind.URL, url=target, is_pro=is_pro)
@@ -52,8 +62,12 @@ def _resolve_payload(target: str, is_pro: bool) -> InputPayload:
 @app.command()
 def process(
     target: Annotated[str, typer.Argument(help="File path, URL, or raw text to process")],
-    pro: Annotated[bool, typer.Option("--pro", "-p", help="Enable deep analytical Pro mode")] = False,
-    output: Annotated[Path | None, typer.Option("--output", "-o", help="Save output to file")] = None,
+    pro: Annotated[
+        bool, typer.Option("--pro", "-p", help="Enable deep analytical Pro mode")
+    ] = False,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Save output to file")
+    ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Output results in JSON format")] = False,
 ) -> None:
     """Ingest any media file, URL, or text, returning transcription and structured summary."""

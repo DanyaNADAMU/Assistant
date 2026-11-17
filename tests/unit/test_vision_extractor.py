@@ -42,17 +42,13 @@ async def test_vision_extractor_can_handle() -> None:
         is True
     )
     assert (
-        await extractor.can_handle(
-            InputPayload(kind=PayloadKind.DOCUMENT, mime_type="image/jpeg")
-        )
+        await extractor.can_handle(InputPayload(kind=PayloadKind.DOCUMENT, mime_type="image/jpeg"))
         is True
     )
 
     # Text documents and text
     assert (
-        await extractor.can_handle(
-            InputPayload(kind=PayloadKind.DOCUMENT, filename="report.pdf")
-        )
+        await extractor.can_handle(InputPayload(kind=PayloadKind.DOCUMENT, filename="report.pdf"))
         is False
     )
     assert await extractor.can_handle(InputPayload(kind=PayloadKind.TEXT, text="hello")) is False
@@ -140,6 +136,7 @@ async def test_document_extractor_scanned_pdf_fallback() -> None:
 
     # Patch PdfReader in test
     import summary_bot.adapters.extractors.document as doc_mod
+
     orig_reader = doc_mod.PdfReader
     try:
         mock_reader_cls = MagicMock()
