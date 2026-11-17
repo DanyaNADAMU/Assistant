@@ -59,6 +59,7 @@ runs:
         chmod 600 "$KEY_FILE"
 
         SSH_OPTS="-o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -p ${{ inputs.port }} -i $KEY_FILE"
+        SCP_OPTS="-o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -P ${{ inputs.port }} -i $KEY_FILE"
         SSH_TARGET="${{ inputs.user }}@${{ inputs.host }}"
 
         echo "==> Testing SSH connection to ${SSH_TARGET}..."
@@ -86,7 +87,8 @@ runs:
 
         # 5. Deploy Quadlet container definition
         echo "==> Deploying Quadlet file to ~/.config/containers/systemd/${{ inputs.service_name }}.container..."
-        scp $SSH_OPTS "${{ inputs.quadlet_file }}" "${SSH_TARGET}:~/.config/containers/systemd/${{ inputs.service_name }}.container"
+        QUADLET_PATH="${GITHUB_WORKSPACE:-.}/${{ inputs.quadlet_file }}"
+        scp $SCP_OPTS "$QUADLET_PATH" "${SSH_TARGET}:~/.config/containers/systemd/${{ inputs.service_name }}.container"
 
         # 6. Reload user systemd daemon and restart service
         echo "==> Reloading systemd user daemon and restarting ${{ inputs.service_name }}.service..."
