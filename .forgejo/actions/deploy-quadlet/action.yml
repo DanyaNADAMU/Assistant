@@ -58,8 +58,8 @@ runs:
         printf '%s\n' "${{ inputs.key }}" > "$KEY_FILE"
         chmod 600 "$KEY_FILE"
 
-        SSH_OPTS="-o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -p ${{ inputs.port }} -i $KEY_FILE"
-        SCP_OPTS="-o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -P ${{ inputs.port }} -i $KEY_FILE"
+        SSH_OPTS="-4 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o BatchMode=yes -o ConnectTimeout=15 -p ${{ inputs.port }} -i $KEY_FILE"
+        SCP_OPTS="-4 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o BatchMode=yes -o ConnectTimeout=15 -P ${{ inputs.port }} -i $KEY_FILE"
         SSH_TARGET="${{ inputs.user }}@${{ inputs.host }}"
 
         echo "==> Testing SSH connection to ${SSH_TARGET}..."
