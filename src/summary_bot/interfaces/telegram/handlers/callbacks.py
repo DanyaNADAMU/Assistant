@@ -2,15 +2,17 @@
 
 import logging
 
-from aiogram import F, Router
+from aiogram import Bot, F, Router
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import BufferedInputFile, CallbackQuery, Message
 
 from summary_bot.adapters.storage import preferences_repo
 from summary_bot.core.services.context_store import context_store
+from summary_bot.core.services.exporter import document_exporter
 from summary_bot.core.services.runner import ResilientModelRunner
 from summary_bot.core.services.telemetry import telemetry_service
 from summary_bot.interfaces.telegram.keyboards import (
+    get_export_keyboard,
     get_settings_keyboard,
     get_status_keyboard,
     get_summary_keyboard,
@@ -44,6 +46,11 @@ async def handle_summary_action(callback: CallbackQuery, runner: ResilientModelR
     has_stt = bool(context.transcription)
 
     try:
+        if action == "export":
+            await callback.message.edit_reply_markup(reply_markup=get_export_keyboard(cid))
+            await callback.answer()
+            return
+
         if action == "orig":
             await callback.message.edit_text(
                 context.original_text,
@@ -129,6 +136,47 @@ async def handle_summary_action(callback: CallbackQuery, runner: ResilientModelR
     except Exception as exc:
         logger.exception("Failed to handle callback %s: %s", callback.data, exc)
         await callback.answer(f"❌ Ошибка: {exc}", show_alert=True)
+
+
+@router.callback_query(F.data.startswith("exp:"))
+async def handle_document_export(callback: CallbackQuery, bot: Bot) -> None:
+    """Generate and send downloadable document in selected format."""
+    if not callback.data or not callback.message or not isinstance(callback.message, Message):
+        await callback.answer()
+        return
+
+    parts = callback.data.split(":")
+    if len(parts) != 3:
+        await callback.answer("Некорректная команда", show_alert=True)
+        return
+
+    _, cid, fmt_str = parts
+    context = await context_store.get(cid)
+    if not context:
+        await callback.answer(
+            "⚠️ Контекст сообщения устарел. Отправьте материал повторно для анализа.",
+            show_alert=True,
+        )
+        return
+
+    try:
+        await callback.answer("📄 Формирую файл документа...", show_alert=False)
+        file_bytes, filename, _ = document_exporter.export(context, fmt_str)
+        doc = BufferedInputFile(file_bytes, filename=filename)
+        await bot.send_document(
+            chat_id=callback.message.chat.id,
+            document=doc,
+            caption=(
+                f"📥 **Экспорт документа** (`{fmt_str.upper()}`)\n\n"
+                f"• ID: `{context.cid}`\n"
+                f"• Модель: `{context.model_used or 'OpenRouter'}`\n"
+                f"• Байт: `{len(file_bytes):,}`"
+            ),
+            parse_mode="Markdown",
+        )
+    except Exception as exc:
+        logger.exception("Failed to export document %s in format %s: %s", cid, fmt_str, exc)
+        await callback.answer(f"❌ Ошибка экспорта: {exc}", show_alert=True)
 
 
 @router.callback_query(F.data.startswith("pref:"))

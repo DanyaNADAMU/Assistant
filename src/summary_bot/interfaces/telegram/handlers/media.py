@@ -59,6 +59,7 @@ async def _execute_and_reply(
             key_takeaways=result.key_takeaways,
             category=result.category,
             model_used=result.model_used,
+            user_id=user_id,
         )
         await context_store.put(ctx)
         reply_markup = get_summary_keyboard(

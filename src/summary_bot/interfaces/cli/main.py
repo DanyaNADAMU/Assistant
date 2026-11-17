@@ -18,6 +18,8 @@ from summary_bot.adapters.openrouter.client import OpenRouterClient
 from summary_bot.adapters.storage import response_cache
 from summary_bot.config import TaskCategory, settings
 from summary_bot.core.models.payload import InputPayload, PayloadKind
+from summary_bot.core.services.context_store import SummaryContext
+from summary_bot.core.services.exporter import document_exporter
 from summary_bot.core.services.runner import ResilientModelRunner
 from summary_bot.core.services.telemetry import telemetry_service
 from summary_bot.interfaces.telegram.bot import start_telegram_bot
@@ -123,10 +125,84 @@ def process(
         console.print(badge)
 
         if output:
-            output.write_text(result.format_telegram_message(), encoding="utf-8")
+            ext = output.suffix.lower().lstrip(".")
+            if ext in ("md", "html", "txt"):
+                ctx = SummaryContext.create(
+                    original_text=result.format_telegram_message(),
+                    source_content=result.transcription or result.summary,
+                    summary=result.summary,
+                    transcription=result.transcription,
+                    key_takeaways=result.key_takeaways,
+                    category=result.category,
+                    model_used=result.model_used,
+                )
+                file_bytes, _, _ = document_exporter.export(
+                    ctx,
+                    ext,
+                    title=Path(target).name if Path(target).exists() else "Сводка материала",
+                )
+                output.write_bytes(file_bytes)
+            else:
+                output.write_text(result.format_telegram_message(), encoding="utf-8")
             console.print(f"[dim]Результат сохранен в {output}[/dim]")
 
     asyncio.run(_async_process())
+
+
+@app.command("export")
+def export_file(
+    target: Annotated[
+        str, typer.Argument(help="File path, URL, or raw text to process and export")
+    ],
+    format_type: Annotated[
+        str, typer.Option("--format", "-f", help="Export format: md, html, txt")
+    ] = "md",
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Target output file path")
+    ] = None,
+    pro: Annotated[bool, typer.Option("--pro", "-p", help="Enable Pro analytical mode")] = False,
+) -> None:
+    """Process any media/link/text and export directly to a structured Markdown, HTML, or TXT document."""
+
+    async def _async_export() -> None:
+        payload = _resolve_payload(target, is_pro=pro)
+        gateway = OpenRouterClient(settings=settings)
+        extractors = [AudioExtractor(), DocumentExtractor(), VisionExtractor(), WebExtractor()]
+        runner = ResilientModelRunner(
+            gateway=gateway,
+            settings=settings,
+            extractors=extractors,
+            cache=response_cache,
+        )
+
+        with console.status(
+            f"[bold cyan]Обработка и экспорт в {format_type.upper()}...", spinner="dots"
+        ):
+            result = await runner.run(payload)
+
+        source_content = result.transcription or result.summary
+        if result.key_takeaways:
+            source_content += "\n\n" + "\n".join(result.key_takeaways)
+
+        ctx = SummaryContext.create(
+            original_text=result.format_telegram_message(),
+            source_content=source_content,
+            summary=result.summary,
+            transcription=result.transcription,
+            key_takeaways=result.key_takeaways,
+            category=result.category,
+            model_used=result.model_used,
+        )
+
+        target_title = Path(target).name if Path(target).exists() else "Сводка материала"
+        file_bytes, default_name, _ = document_exporter.export(ctx, format_type, title=target_title)
+        out_path = output or Path(default_name)
+        out_path.write_bytes(file_bytes)
+        console.print(
+            f"[bold green]✓[/bold green] Документ успешно экспортирован: [bold cyan]{out_path}[/bold cyan] ({len(file_bytes):,} байт)"
+        )
+
+    asyncio.run(_async_export())
 
 
 @app.command("cache-stats")

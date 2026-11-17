@@ -22,6 +22,7 @@ class SummaryContext:
     model_used: str = ""
     views: dict[str, str] = field(default_factory=dict)
     created_at: float = field(default_factory=time.time)
+    user_id: int | None = None
 
     @classmethod
     def create(
@@ -33,6 +34,7 @@ class SummaryContext:
         key_takeaways: list[str] | None = None,
         category: TaskCategory = TaskCategory.TEXT_DOCS,
         model_used: str = "",
+        user_id: int | None = None,
     ) -> "SummaryContext":
         """Factory creating a new context with a unique 8-character ID."""
         cid = uuid.uuid4().hex[:8]
@@ -45,6 +47,7 @@ class SummaryContext:
             key_takeaways=key_takeaways or [],
             category=category,
             model_used=model_used,
+            user_id=user_id,
         )
 
 
@@ -77,6 +80,15 @@ class SummaryContextStore:
                 del self._store[cid]
                 return None
             return context
+
+    async def get_latest_for_user(self, user_id: int) -> SummaryContext | None:
+        """Retrieve the most recent unexpired context for a given user ID."""
+        async with self._lock:
+            self._cleanup_expired()
+            for context in reversed(self._store.values()):
+                if context.user_id == user_id:
+                    return context
+            return None
 
     def _cleanup_expired(self) -> None:
         """Remove expired entries."""

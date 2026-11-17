@@ -2,12 +2,18 @@
 
 from aiogram import Router
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import BufferedInputFile, Message
 
 from summary_bot.adapters.storage import preferences_repo
 from summary_bot.config import TaskCategory, settings
+from summary_bot.core.services.context_store import context_store
+from summary_bot.core.services.exporter import ExportFormat, document_exporter
 from summary_bot.core.services.telemetry import telemetry_service
-from summary_bot.interfaces.telegram.keyboards import get_settings_keyboard, get_status_keyboard
+from summary_bot.interfaces.telegram.keyboards import (
+    get_export_keyboard,
+    get_settings_keyboard,
+    get_status_keyboard,
+)
 
 router = Router(name="commands")
 
@@ -26,6 +32,7 @@ WELCOME_MESSAGE = """👋 **Привет! Я SummaryBot.**
 
 ⚙️ **Команды**:
 /settings — персональные настройки языка, глубины и формата
+/export — экспорт последнего саммари в файл (Markdown, HTML, TXT)
 /status — оперативная диагностика, аптайм и статистика кэша
 /models — текущая матрица моделей (Primary / Fallback)
 /help — подробная справка
@@ -85,3 +92,57 @@ async def cmd_status(message: Message) -> None:
     report = snapshot.format_telegram_report()
     markup = get_status_keyboard()
     await message.answer(report, parse_mode="Markdown", reply_markup=markup)
+
+
+@router.message(Command("export"))
+async def cmd_export(message: Message) -> None:
+    """Export the most recent summary for the user to a file (Markdown, HTML, Text)."""
+    user_id = message.from_user.id if message.from_user else message.chat.id
+    context = await context_store.get_latest_for_user(user_id)
+    if not context:
+        await message.answer(
+            "⚠️ У вас пока нет активных сохраненных саммари для экспорта.\n"
+            "Отправьте боту текст, ссылку, аудио или документ для анализа.",
+            parse_mode="Markdown",
+        )
+        return
+
+    # Check if a specific format was requested (e.g. /export md, /export html, /export txt)
+    args = (message.text or "").strip().split()
+    if len(args) > 1:
+        requested_fmt = args[1].lower().lstrip(".-")
+        if requested_fmt in ("md", "markdown"):
+            target_fmt = ExportFormat.MARKDOWN
+        elif requested_fmt in ("html", "pdf"):
+            target_fmt = ExportFormat.HTML
+        elif requested_fmt in ("txt", "text"):
+            target_fmt = ExportFormat.TEXT
+        else:
+            await message.answer(
+                f"Неизвестный формат `{requested_fmt}`. Доступны: `md`, `html`, `txt`.",
+                parse_mode="Markdown",
+            )
+            return
+
+        file_bytes, filename, _ = document_exporter.export(context, target_fmt)
+        doc = BufferedInputFile(file_bytes, filename=filename)
+        await message.answer_document(
+            document=doc,
+            caption=(
+                f"📥 **Экспорт документа** (`{target_fmt.value.upper()}`)\n\n"
+                f"• ID: `{context.cid}`\n"
+                f"• Модель: `{context.model_used or 'OpenRouter'}`\n"
+                f"• Байт: `{len(file_bytes):,}`"
+            ),
+            parse_mode="Markdown",
+        )
+        return
+
+    # No argument provided -> show format selection keyboard
+    markup = get_export_keyboard(context.cid)
+    await message.answer(
+        f"📥 **Экспорт материала** (`{context.cid}`)\n\n"
+        "Выберите желаемый формат для загрузки документа:",
+        parse_mode="Markdown",
+        reply_markup=markup,
+    )

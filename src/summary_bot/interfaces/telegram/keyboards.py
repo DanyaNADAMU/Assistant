@@ -46,6 +46,25 @@ def get_summary_keyboard(
             InlineKeyboardButton(text="🎙️ Полный транскрипт", callback_data=f"act:{cid}:stt")
         )
 
+    # Always provide export option
+    builder.row(
+        InlineKeyboardButton(text="📥 Экспорт документа", callback_data=f"act:{cid}:export")
+    )
+
+    return builder.as_markup()
+
+
+def get_export_keyboard(cid: str) -> InlineKeyboardMarkup:
+    """Build inline keyboard for document format export selection."""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="📝 Markdown (.md)", callback_data=f"exp:{cid}:md"),
+        InlineKeyboardButton(text="🌐 HTML / PDF (.html)", callback_data=f"exp:{cid}:html"),
+    )
+    builder.row(
+        InlineKeyboardButton(text="📄 Текст (.txt)", callback_data=f"exp:{cid}:txt"),
+        InlineKeyboardButton(text="↩️ Назад к саммари", callback_data=f"act:{cid}:orig"),
+    )
     return builder.as_markup()
 
 
