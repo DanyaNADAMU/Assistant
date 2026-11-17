@@ -1,6 +1,6 @@
 [project]
 name = "summary-bot"
-version = "0.1.0"
+version = "0.2.0"
 description = "Multimodal Telegram Bot & CLI for universal media summarization, speech-to-text, and synthesis"
 readme = "README.md"
 requires-python = ">=3.12"
