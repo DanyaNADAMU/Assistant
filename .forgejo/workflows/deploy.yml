@@ -26,8 +26,8 @@ on:
 
 env:
   REGISTRY: git.nada.mu
-  IMAGE_NAME: git.nada.mu/${{ github.repository }}:latest
-  IMAGE_TAGGED: git.nada.mu/${{ github.repository }}:${{ github.sha }}
+  IMAGE_NAME: git.nada.mu/nadamu/summary-bot:latest
+  IMAGE_TAGGED: git.nada.mu/nadamu/summary-bot:${{ github.sha }}
 
 jobs:
   build:
