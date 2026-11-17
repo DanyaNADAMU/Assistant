@@ -12,6 +12,7 @@ from summary_bot.adapters.extractors.document import DocumentExtractor
 from summary_bot.adapters.extractors.vision import VisionExtractor
 from summary_bot.adapters.extractors.web import WebExtractor
 from summary_bot.adapters.openrouter.client import OpenRouterClient
+from summary_bot.adapters.storage import response_cache
 from summary_bot.config import Settings, settings
 from summary_bot.core.services.runner import ResilientModelRunner
 from summary_bot.interfaces.telegram.handlers.callbacks import router as callbacks_router
@@ -51,7 +52,12 @@ async def start_telegram_bot(custom_settings: Settings | None = None) -> None:
 
     gateway = OpenRouterClient(settings=active_settings)
     extractors = [AudioExtractor(), DocumentExtractor(), VisionExtractor(), WebExtractor()]
-    runner = ResilientModelRunner(gateway=gateway, settings=active_settings, extractors=extractors)
+    runner = ResilientModelRunner(
+        gateway=gateway,
+        settings=active_settings,
+        extractors=extractors,
+        cache=response_cache,
+    )
 
     dp = create_dispatcher(runner)
 

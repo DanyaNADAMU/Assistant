@@ -14,6 +14,7 @@ class ProcessingResult(BaseModel):
     key_takeaways: list[str] = Field(default_factory=list)
     model_used: str
     used_fallback: bool = False
+    from_cache: bool = False
     duration_seconds: float = 0.0
     tokens_prompt: int | None = None
     tokens_completion: int | None = None
@@ -39,9 +40,11 @@ class ProcessingResult(BaseModel):
 
         # Metadata footer
         footer = f"\n—\n🤖 *Модель: {self.model_used}*"
-        if self.used_fallback:
+        if self.from_cache:
+            footer += " `⚡ [кэш]`"
+        elif self.used_fallback:
             footer += " `[fallback]`"
-        footer += f" • {self.duration_seconds:.1f}s"
+        footer += f" • {self.duration_seconds:.2f}s"
         parts.append(footer)
 
         return "\n".join(parts)

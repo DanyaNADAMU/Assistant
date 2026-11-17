@@ -27,6 +27,12 @@ def _is_pro(caption: str | None, text: str | None) -> bool:
     return "/pro" in combined or "--pro" in combined
 
 
+def _is_force_refresh(caption: str | None, text: str | None) -> bool:
+    """Check if /refresh or /force flag is specified to bypass cache."""
+    combined = f"{caption or ''} {text or ''}".lower()
+    return "/refresh" in combined or "--refresh" in combined or "/force" in combined
+
+
 async def _execute_and_reply(
     message: Message,
     payload: InputPayload,
@@ -104,6 +110,7 @@ async def handle_voice(message: Message, bot: Bot, runner: ResilientModelRunner)
                 file_path=file_path,
                 mime_type=message.voice.mime_type or "audio/ogg",
                 is_pro=_is_pro(message.caption, None),
+                force_refresh=_is_force_refresh(message.caption, None),
             )
             await _execute_and_reply(message, payload, runner, status_msg)
     except FileTooLargeError as err:
@@ -129,6 +136,7 @@ async def handle_video_note(message: Message, bot: Bot, runner: ResilientModelRu
                 file_path=file_path,
                 mime_type="video/mp4",
                 is_pro=_is_pro(message.caption, None),
+                force_refresh=_is_force_refresh(message.caption, None),
             )
             await _execute_and_reply(message, payload, runner, status_msg)
     except FileTooLargeError as err:
@@ -155,6 +163,7 @@ async def handle_audio(message: Message, bot: Bot, runner: ResilientModelRunner)
                 filename=message.audio.file_name,
                 mime_type=message.audio.mime_type or "audio/mpeg",
                 is_pro=_is_pro(message.caption, None),
+                force_refresh=_is_force_refresh(message.caption, None),
             )
             await _execute_and_reply(message, payload, runner, status_msg)
     except FileTooLargeError as err:
@@ -183,6 +192,7 @@ async def handle_video(message: Message, bot: Bot, runner: ResilientModelRunner)
                 filename=message.video.file_name,
                 mime_type=message.video.mime_type or "video/mp4",
                 is_pro=_is_pro(message.caption, None),
+                force_refresh=_is_force_refresh(message.caption, None),
             )
             await _execute_and_reply(message, payload, runner, status_msg)
     except FileTooLargeError as err:
@@ -228,6 +238,7 @@ async def handle_document(message: Message, bot: Bot, runner: ResilientModelRunn
                 mime_type=mime or ("image/jpeg" if is_image else None),
                 text=message.caption,
                 is_pro=_is_pro(message.caption, None),
+                force_refresh=_is_force_refresh(message.caption, None),
             )
             await _execute_and_reply(message, payload, runner, status_msg)
     except FileTooLargeError as err:
@@ -255,6 +266,7 @@ async def handle_photo(message: Message, bot: Bot, runner: ResilientModelRunner)
                 mime_type="image/jpeg",
                 text=message.caption,
                 is_pro=_is_pro(message.caption, None),
+                force_refresh=_is_force_refresh(message.caption, None),
             )
             await _execute_and_reply(message, payload, runner, status_msg)
     except FileTooLargeError as err:
@@ -336,16 +348,34 @@ async def handle_text(message: Message, bot: Bot, runner: ResilientModelRunner) 
     assert message.text is not None
     text = message.text.strip()
     is_pro = _is_pro(None, text)
+    force_refresh = _is_force_refresh(None, text)
 
-    # Clean /pro trigger from input text
-    cleaned_text = text.replace("/pro", "").replace("--pro", "").strip()
+    # Clean /pro and /refresh triggers from input text
+    cleaned_text = (
+        text.replace("/pro", "")
+        .replace("--pro", "")
+        .replace("/refresh", "")
+        .replace("--refresh", "")
+        .replace("/force", "")
+        .strip()
+    )
 
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     status_msg = await message.reply("⏳ *Анализирую текст...*", parse_mode="Markdown")
 
     if cleaned_text.startswith(("http://", "https://")):
-        payload = InputPayload(kind=PayloadKind.URL, url=cleaned_text, is_pro=is_pro)
+        payload = InputPayload(
+            kind=PayloadKind.URL,
+            url=cleaned_text,
+            is_pro=is_pro,
+            force_refresh=force_refresh,
+        )
     else:
-        payload = InputPayload(kind=PayloadKind.TEXT, text=cleaned_text, is_pro=is_pro)
+        payload = InputPayload(
+            kind=PayloadKind.TEXT,
+            text=cleaned_text,
+            is_pro=is_pro,
+            force_refresh=force_refresh,
+        )
 
     await _execute_and_reply(message, payload, runner, status_msg)

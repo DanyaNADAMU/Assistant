@@ -15,6 +15,7 @@ from summary_bot.adapters.extractors.document import DocumentExtractor
 from summary_bot.adapters.extractors.vision import VisionExtractor
 from summary_bot.adapters.extractors.web import WebExtractor
 from summary_bot.adapters.openrouter.client import OpenRouterClient
+from summary_bot.adapters.storage import response_cache
 from summary_bot.config import TaskCategory, settings
 from summary_bot.core.models.payload import InputPayload, PayloadKind
 from summary_bot.core.services.runner import ResilientModelRunner
@@ -65,6 +66,9 @@ def process(
     pro: Annotated[
         bool, typer.Option("--pro", "-p", help="Enable deep analytical Pro mode")
     ] = False,
+    refresh: Annotated[
+        bool, typer.Option("--refresh", "-r", help="Bypass cache and force fresh summarization")
+    ] = False,
     output: Annotated[
         Path | None, typer.Option("--output", "-o", help="Save output to file")
     ] = None,
@@ -74,9 +78,15 @@ def process(
 
     async def _async_process() -> None:
         payload = _resolve_payload(target, is_pro=pro)
+        payload.force_refresh = refresh
         gateway = OpenRouterClient(settings=settings)
         extractors = [AudioExtractor(), DocumentExtractor(), VisionExtractor(), WebExtractor()]
-        runner = ResilientModelRunner(gateway=gateway, settings=settings, extractors=extractors)
+        runner = ResilientModelRunner(
+            gateway=gateway,
+            settings=settings,
+            extractors=extractors,
+            cache=response_cache,
+        )
 
         with console.status("[bold cyan]Обработка мультимодального конвейера...", spinner="dots"):
             result = await runner.run(payload)
@@ -103,7 +113,9 @@ def process(
         )
 
         badge = f"[bold cyan]Модель:[/bold cyan] {result.model_used}"
-        if result.used_fallback:
+        if result.from_cache:
+            badge += " [bold green]⚡ [КЭШ][/bold green]"
+        elif result.used_fallback:
             badge += " [bold magenta][FALLBACK][/bold magenta]"
         badge += f" | [dim]{result.duration_seconds:.2f}s[/dim]"
 
@@ -114,6 +126,27 @@ def process(
             console.print(f"[dim]Результат сохранен в {output}[/dim]")
 
     asyncio.run(_async_process())
+
+
+@app.command("cache-stats")
+def cache_stats() -> None:
+    """Display persistent cache deduplication metrics."""
+
+    async def _async_stats() -> None:
+        stats = await response_cache.get_stats()
+        table = Table(title="⚡ Статистика кэширования SummaryBot", border_style="green")
+        table.add_column("Метрика", style="bold white")
+        table.add_column("Значение", style="cyan")
+        table.add_row("Сохраненных саммари", str(stats.summary_count))
+        table.add_row("Попаданий в кэш (Саммари)", str(stats.summary_hits))
+        table.add_row("Сохраненных уточнений", str(stats.refinement_count))
+        table.add_row("Попаданий в кэш (Уточнения)", str(stats.refinement_hits))
+        table.add_row("Всего записей", str(stats.total_entries))
+        table.add_row("Всего попаданий (Hits)", str(stats.total_hits))
+        table.add_row("Эффективность (Hit Rate)", f"{stats.hit_rate:.1f}%")
+        console.print(table)
+
+    asyncio.run(_async_stats())
 
 
 @app.command()

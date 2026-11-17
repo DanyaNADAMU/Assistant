@@ -61,7 +61,7 @@ class OutputFormat(StrEnum):
 class UserPreferences(BaseModel):
     """Persistent user preferences for summarization styling."""
 
-    user_id: int
+    user_id: int = 0
     language: OutputLanguage = OutputLanguage.AUTO
     depth: SummaryDepth = SummaryDepth.STANDARD
     format: OutputFormat = OutputFormat.STANDARD
