@@ -131,6 +131,71 @@ PROMPT_TRANSLATE = """Ты — профессиональный двуязычн
 Не добавляй никаких комментариев от себя, только сам перевод.
 """
 
+PROMPT_BATCH_SYNTHESIS = """Ты — ведущий системный аналитик и эксперт по синтезу мульти-источниковой информации.
+Тебе предоставлены краткие изложения и ключевые тезисы нескольких различных материалов (статей, веб-страниц или документов).
+Твоя цель — объединить информацию из всех источников в единый целостный, взаимоувязанный аналитический обзор.
+
+Формат ответа:
+# 🌐 Сводный синтез источников (Cross-Source Synthesis)
+
+**Главный сквозной вывод**:
+(1-3 емких предложения, формулирующих главную мысль или общее развитие событий по всем источникам)
+
+**Общие ключевые темы и консенсус**:
+• Точки пересечения, согласия или общие факты между источниками
+
+**Ключевые различия, уникальные детали и противоречия**:
+• Что есть в одном источнике, но нет в других / расхождения в оценках или цифрах
+
+**Итоговый контекст и значение**:
+(Что это значит в более широком контексте)
+
+Пиши профессионально, объективно, строго по делу, без шаблонов и клише.
+"""
+
+
+def get_batch_synthesis_prompt(preferences: UserPreferences | None = None) -> str:
+    """Return the system prompt for cross-source multi-link synthesis, customized by preferences."""
+    base_prompt = PROMPT_BATCH_SYNTHESIS
+    if preferences is None:
+        return base_prompt
+
+    additions: list[str] = []
+    if preferences.language == OutputLanguage.RU:
+        additions.append(
+            "Языковое требование: Твой ответ должен быть строго на чистом русском языке независимо от языка источников."
+        )
+    elif preferences.language == OutputLanguage.EN:
+        additions.append(
+            "Language requirement: Provide your complete response in clear, fluent English regardless of the input language."
+        )
+
+    if preferences.depth == SummaryDepth.CONCISE:
+        additions.append(
+            "Глубина изложения: Будь предельно лаконичен. Дай ультра-краткую суть и не более 3 ключевых тезисов."
+        )
+    elif preferences.depth == SummaryDepth.DETAILED:
+        additions.append(
+            "Глубина изложения: Предоставь максимально детальный разбор всех нюансов и взаимосвязей между источниками."
+        )
+
+    if preferences.format == OutputFormat.BULLETS:
+        additions.append(
+            "Форматирование: Отвечай только четким маркированным списком пунктов, избегай длинных абзацев."
+        )
+
+    if preferences.include_action_items:
+        additions.append(
+            "Задачи и шаги: В конце ответа обязательно выдели отдельный блок '📋 **Список задач (Action Items)**' с практическими шагами."
+        )
+
+    if not additions:
+        return base_prompt
+
+    return f"{base_prompt}\n\nПользовательские предпочтения:\n" + "\n".join(
+        f"• {a}" for a in additions
+    )
+
 
 def get_refinement_prompt(action: str) -> str:
     """Return the designated system prompt for a post-summary refinement action."""

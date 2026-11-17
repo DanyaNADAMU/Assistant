@@ -18,6 +18,7 @@ from summary_bot.adapters.openrouter.client import OpenRouterClient
 from summary_bot.adapters.storage import response_cache
 from summary_bot.config import TaskCategory, settings
 from summary_bot.core.models.payload import InputPayload, PayloadKind
+from summary_bot.core.services.batch import BatchSummarizer
 from summary_bot.core.services.context_store import SummaryContext
 from summary_bot.core.services.exporter import document_exporter
 from summary_bot.core.services.runner import ResilientModelRunner
@@ -275,6 +276,95 @@ def status_cmd() -> None:
         console.print(table)
 
     asyncio.run(_async_diag())
+
+
+@app.command("batch")
+def batch_urls(
+    urls: Annotated[
+        list[str],
+        typer.Argument(help="List of URLs to concurrently summarize and synthesize"),
+    ],
+    instruction: Annotated[
+        str | None,
+        typer.Option("--instruction", "-i", help="Custom analytical prompt or comparison query"),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Target output file (supports .md, .html, .txt)"),
+    ] = None,
+    pro: Annotated[bool, typer.Option("--pro", "-p", help="Enable Pro analytical mode")] = False,
+    refresh: Annotated[
+        bool, typer.Option("--refresh", "-r", help="Bypass cache and force re-generation")
+    ] = False,
+) -> None:
+    """Process multiple URLs concurrently and produce a cross-source analytical synthesis."""
+
+    async def _async_batch() -> None:
+        gateway = OpenRouterClient(settings=settings)
+        extractors = [AudioExtractor(), DocumentExtractor(), VisionExtractor(), WebExtractor()]
+        runner = ResilientModelRunner(
+            gateway=gateway,
+            settings=settings,
+            extractors=extractors,
+            cache=response_cache,
+        )
+        batch_summarizer = BatchSummarizer(
+            runner=runner,
+            gateway=gateway,
+            settings=settings,
+        )
+
+        with console.status(
+            f"[bold cyan]Параллельный анализ {len(urls)} источников и синтез...", spinner="dots"
+        ):
+            batch_result = await batch_summarizer.summarize_batch(
+                urls=urls,
+                user_instruction=instruction,
+                is_pro=pro,
+                force_refresh=refresh,
+            )
+
+        formatted_msg = batch_result.format_telegram_message()
+        console.print(
+            Panel(
+                Markdown(formatted_msg),
+                title="🌐 Мульти-источниковый аналитический обзор",
+                border_style="cyan",
+            )
+        )
+
+        if output:
+            ext = output.suffix.lower().lstrip(".")
+            if ext in ("md", "html", "txt"):
+                source_content_blocks = [
+                    f"Мульти-источниковый аналитический обзор ({batch_result.successful_sources}/{batch_result.total_sources})",
+                    f"Синтез:\n{batch_result.synthesis}",
+                ]
+                for item in batch_result.items:
+                    source_content_blocks.append(f"Источник: {item.url}\n{item.summary}")
+                    if item.key_takeaways:
+                        source_content_blocks.append("Тезисы:\n" + "\n".join(item.key_takeaways))
+
+                ctx = SummaryContext.create(
+                    original_text=formatted_msg,
+                    source_content="\n\n".join(source_content_blocks),
+                    summary=batch_result.synthesis,
+                    transcription=None,
+                    key_takeaways=[],
+                    category=TaskCategory.TEXT_DOCS,
+                    model_used=batch_result.synthesis_model,
+                )
+                file_bytes, _, _ = document_exporter.export(
+                    ctx,
+                    ext,
+                    title="Мульти-источниковый аналитический обзор",
+                )
+                output.write_bytes(file_bytes)
+            else:
+                output.write_text(formatted_msg, encoding="utf-8")
+            console.print(f"[dim]Результат сохранен в {output}[/dim]")
+
+    asyncio.run(_async_batch())
 
 
 @app.command("healthcheck")

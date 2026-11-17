@@ -8,8 +8,9 @@ from aiogram.enums import ChatAction
 from aiogram.types import Message
 
 from summary_bot.adapters.storage import preferences_repo
-from summary_bot.config import settings
+from summary_bot.config import TaskCategory, settings
 from summary_bot.core.models.payload import InputPayload, PayloadKind
+from summary_bot.core.services.batch import BatchSummarizer, extract_urls
 from summary_bot.core.services.context_store import SummaryContext, context_store
 from summary_bot.core.services.runner import ResilientModelRunner
 from summary_bot.interfaces.telegram.downloader import FileTooLargeError, download_telegram_file
@@ -86,6 +87,76 @@ async def _execute_and_reply(
         logger.exception("Failed to process message %s: %s", message.message_id, exc)
         await status_msg.edit_text(
             f"❌ **Произошла ошибка при обработке**:\n`{exc}`\n\nПопробуйте повторить запрос позже.",
+            parse_mode="Markdown",
+        )
+
+
+async def _execute_batch_and_reply(
+    message: Message,
+    urls: list[str],
+    user_instruction: str | None,
+    batch_summarizer: BatchSummarizer,
+    status_msg: Message,
+    is_pro: bool = False,
+    force_refresh: bool = False,
+) -> None:
+    """Execute multi-URL batch summarizer and send formatted results to user."""
+    try:
+        user_id = message.from_user.id if message.from_user else message.chat.id
+        prefs = await preferences_repo.get(user_id)
+        batch_result = await batch_summarizer.summarize_batch(
+            urls=urls,
+            user_instruction=user_instruction,
+            is_pro=is_pro,
+            force_refresh=force_refresh,
+            preferences=prefs,
+        )
+        formatted_text = batch_result.format_telegram_message()
+
+        # Build context for interactive buttons and document export
+        source_content_blocks = [
+            f"Мульти-источниковый аналитический обзор ({batch_result.successful_sources}/{batch_result.total_sources})",
+            f"Синтез:\n{batch_result.synthesis}",
+        ]
+        for item in batch_result.items:
+            source_content_blocks.append(f"Источник: {item.url}\n{item.summary}")
+            if item.key_takeaways:
+                source_content_blocks.append("Тезисы:\n" + "\n".join(item.key_takeaways))
+
+        ctx = SummaryContext.create(
+            original_text=formatted_text,
+            source_content="\n\n".join(source_content_blocks),
+            summary=batch_result.synthesis,
+            transcription=None,
+            key_takeaways=[],
+            category=TaskCategory.TEXT_DOCS,
+            model_used=batch_result.synthesis_model,
+            user_id=user_id,
+        )
+        await context_store.put(ctx)
+        reply_markup = get_summary_keyboard(
+            cid=ctx.cid,
+            active_view="orig",
+            has_transcription=False,
+        )
+
+        if len(formatted_text) <= MAX_TELEGRAM_MESSAGE_LENGTH:
+            await status_msg.edit_text(
+                formatted_text, parse_mode="Markdown", reply_markup=reply_markup
+            )
+        else:
+            await status_msg.delete()
+            chunks = [
+                formatted_text[i : i + MAX_TELEGRAM_MESSAGE_LENGTH]
+                for i in range(0, len(formatted_text), MAX_TELEGRAM_MESSAGE_LENGTH)
+            ]
+            for idx, chunk in enumerate(chunks):
+                markup = reply_markup if idx == len(chunks) - 1 else None
+                await message.reply(chunk, parse_mode="Markdown", reply_markup=markup)
+    except Exception as exc:
+        logger.exception("Failed to process batch for message %s: %s", message.message_id, exc)
+        await status_msg.edit_text(
+            f"❌ **Произошла ошибка при мульти-источниковой обработке**:\n`{exc}`\n\nПопробуйте повторить запрос позже.",
             parse_mode="Markdown",
         )
 
@@ -344,8 +415,13 @@ async def handle_location(message: Message, bot: Bot, runner: ResilientModelRunn
 
 
 @router.message(F.text)
-async def handle_text(message: Message, bot: Bot, runner: ResilientModelRunner) -> None:
-    """Handle plain text messages and links."""
+async def handle_text(
+    message: Message,
+    bot: Bot,
+    runner: ResilientModelRunner,
+    batch_summarizer: BatchSummarizer,
+) -> None:
+    """Handle plain text messages, single URLs, and multi-URL batch synthesis."""
     assert message.text is not None
     text = message.text.strip()
     is_pro = _is_pro(None, text)
@@ -361,13 +437,41 @@ async def handle_text(message: Message, bot: Bot, runner: ResilientModelRunner) 
         .strip()
     )
 
+    urls = extract_urls(cleaned_text)
+
+    # Case A: Multi-URL batch synthesis (2 or more URLs found in message)
+    if len(urls) >= 2:
+        instruction_text = cleaned_text
+        for u in urls:
+            instruction_text = instruction_text.replace(u, "")
+        user_instruction: str | None = instruction_text.strip() or None
+
+        await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+        status_msg = await message.reply(
+            f"⏳ *Параллельно анализирую {len(urls)} источников и формирую синтез...*",
+            parse_mode="Markdown",
+        )
+        await _execute_batch_and_reply(
+            message=message,
+            urls=urls,
+            user_instruction=user_instruction,
+            batch_summarizer=batch_summarizer,
+            status_msg=status_msg,
+            is_pro=is_pro,
+            force_refresh=force_refresh,
+        )
+        return
+
+    # Case B: Single URL or plain text
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     status_msg = await message.reply("⏳ *Анализирую текст...*", parse_mode="Markdown")
 
-    if cleaned_text.startswith(("http://", "https://")):
+    if len(urls) == 1 and (
+        cleaned_text == urls[0] or cleaned_text.startswith(("http://", "https://"))
+    ):
         payload = InputPayload(
             kind=PayloadKind.URL,
-            url=cleaned_text,
+            url=urls[0],
             is_pro=is_pro,
             force_refresh=force_refresh,
         )

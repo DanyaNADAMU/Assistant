@@ -1,14 +1,17 @@
 """Telegram command handlers."""
 
-from aiogram import Router
+from aiogram import Bot, Router
+from aiogram.enums import ChatAction
 from aiogram.filters import Command
 from aiogram.types import BufferedInputFile, Message
 
 from summary_bot.adapters.storage import preferences_repo
 from summary_bot.config import TaskCategory, settings
+from summary_bot.core.services.batch import BatchSummarizer, extract_urls
 from summary_bot.core.services.context_store import context_store
 from summary_bot.core.services.exporter import ExportFormat, document_exporter
 from summary_bot.core.services.telemetry import telemetry_service
+from summary_bot.interfaces.telegram.handlers.media import _execute_batch_and_reply
 from summary_bot.interfaces.telegram.keyboards import (
     get_export_keyboard,
     get_settings_keyboard,
@@ -25,12 +28,14 @@ WELCOME_MESSAGE = """👋 **Привет! Я SummaryBot.**
 • 📄 **Документы (PDF, DOCX, TXT)** ➔ Анализ и выжимка главного
 • 🖼️ **Фото, скриншоты, стикеры, GIF** ➔ Распознавание текста (OCR) и смысла
 • 🔗 **Ссылки и статьи** ➔ Скачивание текста и структурированное саммари
+• 🌐 **Несколько ссылок сразу (Batch)** ➔ Параллельный анализ и сводный синтез
 • 💬 **Текстовые сообщения и заметки** ➔ TL;DR и ключевые тезисы
 • 📍 **Геолокации** ➔ Описание контекста
 
 Просто перешли или отправь мне любой контент!
 
 ⚙️ **Команды**:
+/batch — мульти-источниковый параллельный анализ и синтез ссылок
 /settings — персональные настройки языка, глубины и формата
 /export — экспорт последнего саммари в файл (Markdown, HTML, TXT)
 /status — оперативная диагностика, аптайм и статистика кэша
@@ -43,10 +48,13 @@ HELP_MESSAGE = """📖 **Справка по SummaryBot**
 1. **Обычный режим**:
    Просто отправь боту файл, голосовое, видео, ссылку или текст. Бот автоматически определит категорию контента, извлечет суть и предоставит результат.
 
-2. **Pro-режим (Глубокий анализ)**:
+2. **Мульти-источниковый синтез (/batch)**:
+   Отправь сразу несколько ссылок в одном сообщении (или используй команду `/batch <url1> <url2>...`). Бот параллельно извлечет контент из всех источников, составит обзор каждого из них и сформирует кросс-источниковый аналитический синтез.
+
+3. **Pro-режим (Глубокий анализ)**:
    Если тебе нужен максимально глубокий и подробный экспертный разбор документа или статьи, добавь подпись `/pro` к сообщению или документу.
 
-3. **Отказоустойчивость**:
+4. **Отказоустойчивость**:
    Бот использует связку **Primary ➔ Fallback**. Если основная модель занята или перегружена, бот автоматически переключится на резервную модель, чтобы вы гарантированно получили ответ.
 """
 
@@ -145,4 +153,51 @@ async def cmd_export(message: Message) -> None:
         "Выберите желаемый формат для загрузки документа:",
         parse_mode="Markdown",
         reply_markup=markup,
+    )
+
+
+@router.message(Command("batch"))
+async def cmd_batch(
+    message: Message,
+    bot: Bot,
+    batch_summarizer: BatchSummarizer,
+) -> None:
+    """Analyze multiple URLs concurrently and provide cross-source executive synthesis."""
+    text = (message.text or "").replace("/batch", "", 1).strip()
+    urls = extract_urls(text)
+    if not urls:
+        await message.answer(
+            "ℹ️ **Команда /batch**: мульти-источниковый параллельный анализ и синтез ссылок.\n\n"
+            "**Пример использования**:\n"
+            "`/batch https://example.com/art1 https://example.com/art2`\n\n"
+            "Вы также можете задать инструкцию или вопрос:\n"
+            "`/batch Сравни подходы в статьях: https://... https://...`",
+            parse_mode="Markdown",
+        )
+        return
+
+    is_pro = "/pro" in text.lower() or "--pro" in text.lower()
+    force_refresh = "/refresh" in text.lower() or "--refresh" in text.lower() or "/force" in text.lower()
+
+    # User instruction is whatever text remains after removing /batch, /pro, /refresh and URLs
+    instruction_text = text
+    for word in ("/pro", "--pro", "/refresh", "--refresh", "/force"):
+        instruction_text = instruction_text.replace(word, "")
+    for u in urls:
+        instruction_text = instruction_text.replace(u, "")
+    user_instruction: str | None = instruction_text.strip() or None
+
+    await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+    status_msg = await message.reply(
+        f"⏳ *Параллельно анализирую {len(urls)} источников и формирую синтез...*",
+        parse_mode="Markdown",
+    )
+    await _execute_batch_and_reply(
+        message=message,
+        urls=urls,
+        user_instruction=user_instruction,
+        batch_summarizer=batch_summarizer,
+        status_msg=status_msg,
+        is_pro=is_pro,
+        force_refresh=force_refresh,
     )

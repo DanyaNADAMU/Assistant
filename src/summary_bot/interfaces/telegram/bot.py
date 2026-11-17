@@ -14,6 +14,7 @@ from summary_bot.adapters.extractors.web import WebExtractor
 from summary_bot.adapters.openrouter.client import OpenRouterClient
 from summary_bot.adapters.storage import response_cache
 from summary_bot.config import Settings, settings
+from summary_bot.core.services.batch import BatchSummarizer
 from summary_bot.core.services.runner import ResilientModelRunner
 from summary_bot.interfaces.telegram.handlers.callbacks import router as callbacks_router
 from summary_bot.interfaces.telegram.handlers.commands import router as commands_router
@@ -22,12 +23,23 @@ from summary_bot.interfaces.telegram.handlers.media import router as media_route
 logger = logging.getLogger(__name__)
 
 
-def create_dispatcher(runner: ResilientModelRunner) -> Dispatcher:
+def create_dispatcher(
+    runner: ResilientModelRunner,
+    batch_summarizer: BatchSummarizer | None = None,
+) -> Dispatcher:
     """Create and configure aiogram Dispatcher with registered dependency workflow."""
     dp = Dispatcher()
 
-    # Pass runner dependency to all handler calls
+    if batch_summarizer is None:
+        batch_summarizer = BatchSummarizer(
+            runner=runner,
+            gateway=runner._gateway,
+            settings=runner._settings,
+        )
+
+    # Pass dependencies to all handler calls
     dp["runner"] = runner
+    dp["batch_summarizer"] = batch_summarizer
 
     # Register routers (commands must be first to intercept /start, /help, /models)
     dp.include_router(commands_router)
@@ -58,8 +70,13 @@ async def start_telegram_bot(custom_settings: Settings | None = None) -> None:
         extractors=extractors,
         cache=response_cache,
     )
+    batch_summarizer = BatchSummarizer(
+        runner=runner,
+        gateway=gateway,
+        settings=active_settings,
+    )
 
-    dp = create_dispatcher(runner)
+    dp = create_dispatcher(runner=runner, batch_summarizer=batch_summarizer)
 
     logger.info("Starting Telegram Bot polling loop...")
     try:
