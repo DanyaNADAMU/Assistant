@@ -6,7 +6,8 @@ from aiogram.types import Message
 
 from summary_bot.adapters.storage import preferences_repo
 from summary_bot.config import TaskCategory, settings
-from summary_bot.interfaces.telegram.keyboards import get_settings_keyboard
+from summary_bot.core.services.telemetry import telemetry_service
+from summary_bot.interfaces.telegram.keyboards import get_settings_keyboard, get_status_keyboard
 
 router = Router(name="commands")
 
@@ -25,6 +26,7 @@ WELCOME_MESSAGE = """👋 **Привет! Я SummaryBot.**
 
 ⚙️ **Команды**:
 /settings — персональные настройки языка, глубины и формата
+/status — оперативная диагностика, аптайм и статистика кэша
 /models — текущая матрица моделей (Primary / Fallback)
 /help — подробная справка
 """
@@ -74,3 +76,12 @@ async def cmd_settings(message: Message) -> None:
     card_text = prefs.format_settings_card(username=username)
     markup = get_settings_keyboard(prefs)
     await message.answer(card_text, parse_mode="Markdown", reply_markup=markup)
+
+
+@router.message(Command("status", "diag"))
+async def cmd_status(message: Message) -> None:
+    """Display real-time operational telemetry, uptime, memory, and cache metrics."""
+    snapshot = await telemetry_service.collect()
+    report = snapshot.format_telegram_report()
+    markup = get_status_keyboard()
+    await message.answer(report, parse_mode="Markdown", reply_markup=markup)

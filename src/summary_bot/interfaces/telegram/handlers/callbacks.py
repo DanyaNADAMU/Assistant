@@ -9,8 +9,10 @@ from aiogram.types import CallbackQuery, Message
 from summary_bot.adapters.storage import preferences_repo
 from summary_bot.core.services.context_store import context_store
 from summary_bot.core.services.runner import ResilientModelRunner
+from summary_bot.core.services.telemetry import telemetry_service
 from summary_bot.interfaces.telegram.keyboards import (
     get_settings_keyboard,
+    get_status_keyboard,
     get_summary_keyboard,
 )
 
@@ -177,3 +179,42 @@ async def handle_preference_toggle(callback: CallbackQuery) -> None:
             logger.warning("Failed to edit settings message: %s", err)
 
     await callback.answer(toast)
+
+
+@router.callback_query(F.data.startswith("status:"))
+async def handle_status_action(callback: CallbackQuery) -> None:
+    """Handle status card interactive actions (refresh, navigate to settings)."""
+    if not callback.data or not callback.message or not isinstance(callback.message, Message):
+        await callback.answer()
+        return
+
+    action = callback.data.removeprefix("status:")
+
+    if action == "refresh":
+        snapshot = await telemetry_service.collect()
+        report = snapshot.format_telegram_report()
+        markup = get_status_keyboard()
+        try:
+            await callback.message.edit_text(report, parse_mode="Markdown", reply_markup=markup)
+            await callback.answer("Данные обновлены ✅")
+        except TelegramBadRequest as err:
+            if "message is not modified" in str(err).lower():
+                await callback.answer("Данные актуальны ✅")
+            else:
+                logger.warning("Failed to refresh status message: %s", err)
+                await callback.answer()
+        return
+
+    if action == "settings":
+        user_id = callback.from_user.id
+        username = callback.from_user.username
+        prefs = await preferences_repo.get(user_id)
+        card_text = prefs.format_settings_card(username=username)
+        markup = get_settings_keyboard(prefs)
+        try:
+            await callback.message.edit_text(card_text, parse_mode="Markdown", reply_markup=markup)
+        except TelegramBadRequest as err:
+            if "message is not modified" not in str(err).lower():
+                logger.warning("Failed to open settings: %s", err)
+        await callback.answer()
+        return

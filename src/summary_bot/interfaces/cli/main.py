@@ -19,6 +19,7 @@ from summary_bot.adapters.storage import response_cache
 from summary_bot.config import TaskCategory, settings
 from summary_bot.core.models.payload import InputPayload, PayloadKind
 from summary_bot.core.services.runner import ResilientModelRunner
+from summary_bot.core.services.telemetry import telemetry_service
 from summary_bot.interfaces.telegram.bot import start_telegram_bot
 
 app = typer.Typer(
@@ -169,6 +170,47 @@ def tg_serve() -> None:
     """Launch the Telegram Bot long-polling daemon service."""
     console.print("[bold cyan]Запуск сервиса Telegram бота SummaryBot...[/bold cyan]")
     asyncio.run(start_telegram_bot())
+
+
+@app.command("status")
+def status_cmd() -> None:
+    """Display real-time operational telemetry, memory, and database diagnostics."""
+
+    async def _async_diag() -> None:
+        snapshot = await telemetry_service.collect()
+        table = Table(
+            title=f"📊 Диагностика и статус SummaryBot ({snapshot.environment})",
+            border_style="cyan",
+        )
+        table.add_column("Компонент", style="bold white")
+        table.add_column("Метрика / Значение", style="green")
+
+        table.add_row("Среда (Environment)", snapshot.environment)
+        table.add_row("Аптайм (Uptime)", snapshot.uptime_formatted)
+        table.add_row("Память (Resident RSS)", f"{snapshot.memory_rss_mb:.1f} МБ")
+        table.add_row("Размер базы данных SQLite", f"{snapshot.db_size_kb:.1f} КБ")
+        table.add_row("Размер журнала WAL", f"{snapshot.wal_size_kb:.1f} КБ")
+        table.add_row("Зарегистрированных пользователей", str(snapshot.registered_users))
+        table.add_row("Саммари в кэше", str(snapshot.cache_stats.summary_count))
+        table.add_row("Попаданий в кэш (Саммари)", str(snapshot.cache_stats.summary_hits))
+        table.add_row("Уточнений в кэше", str(snapshot.cache_stats.refinement_count))
+        table.add_row("Эффективность кэша", f"{snapshot.cache_stats.hit_rate:.1f}%")
+
+        console.print(table)
+
+    asyncio.run(_async_diag())
+
+
+@app.command("healthcheck")
+def healthcheck() -> None:
+    """Validate runtime health for container and systemd watchdogs (exit 0 on healthy)."""
+    healthy = telemetry_service.is_healthy()
+    if healthy:
+        console.print("[bold green]OK: SummaryBot service healthy[/bold green]")
+        raise typer.Exit(code=0)
+
+    console.print("[bold red]ERROR: SummaryBot service unhealthy[/bold red]")
+    raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":

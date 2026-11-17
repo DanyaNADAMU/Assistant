@@ -86,3 +86,13 @@ def get_settings_keyboard(preferences: UserPreferences) -> InlineKeyboardMarkup:
     )
 
     return builder.as_markup()
+
+
+def get_status_keyboard() -> InlineKeyboardMarkup:
+    """Build inline keyboard for status and diagnostics card."""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="🔄 Обновить статус", callback_data="status:refresh"),
+        InlineKeyboardButton(text="⚙️ Настройки", callback_data="status:settings"),
+    )
+    return builder.as_markup()
