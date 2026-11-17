@@ -70,7 +70,6 @@ jobs:
             --dockerfile=${{ github.workspace }}/Containerfile
             --destination=${{ env.IMAGE_NAME }}
             --destination=${{ env.IMAGE_TAGGED }}
-            --cache=true
 
       - name: Cleanup Registry Credentials
         if: always()

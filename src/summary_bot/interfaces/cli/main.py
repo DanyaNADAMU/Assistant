@@ -12,6 +12,7 @@ from rich.table import Table
 
 from summary_bot.adapters.extractors.audio import AudioExtractor
 from summary_bot.adapters.extractors.document import DocumentExtractor
+from summary_bot.adapters.extractors.vision import VisionExtractor
 from summary_bot.adapters.extractors.web import WebExtractor
 from summary_bot.adapters.openrouter.client import OpenRouterClient
 from summary_bot.config import TaskCategory, settings
@@ -60,7 +61,7 @@ def process(
     async def _async_process() -> None:
         payload = _resolve_payload(target, is_pro=pro)
         gateway = OpenRouterClient(settings=settings)
-        extractors = [AudioExtractor(), DocumentExtractor(), WebExtractor()]
+        extractors = [AudioExtractor(), DocumentExtractor(), VisionExtractor(), WebExtractor()]
         runner = ResilientModelRunner(gateway=gateway, settings=settings, extractors=extractors)
 
         with console.status("[bold cyan]Обработка мультимодального конвейера...", spinner="dots"):

@@ -184,23 +184,44 @@ async def handle_video(message: Message, bot: Bot, runner: ResilientModelRunner)
 
 @router.message(F.document)
 async def handle_document(message: Message, bot: Bot, runner: ResilientModelRunner) -> None:
-    """Handle documents (PDF, DOCX, TXT, etc.)."""
+    """Handle documents (PDF, DOCX, TXT, images sent as uncompressed files, etc.)."""
     assert message.document is not None
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
-    status_msg = await message.reply("⏳ *Читаю и структурирую документ...*", parse_mode="Markdown")
+
+    filename = message.document.file_name or "doc.pdf"
+    ext = Path(filename).suffix.lower()
+    mime = message.document.mime_type or ""
+
+    is_image = mime.startswith("image/") or ext in (
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".webp",
+        ".bmp",
+        ".gif",
+        ".tiff",
+    )
+    status_text = (
+        "⏳ *Анализирую изображение...*"
+        if is_image
+        else "⏳ *Читаю и структурирую документ...*"
+    )
+    status_msg = await message.reply(status_text, parse_mode="Markdown")
 
     try:
         async with download_telegram_file(
             bot=bot,
             file_id=message.document.file_id,
             max_size_bytes=settings.max_download_size_bytes,
-            custom_suffix=Path(message.document.file_name or "doc.pdf").suffix or ".pdf",
+            custom_suffix=ext or ".pdf",
         ) as file_path:
+            kind = PayloadKind.IMAGE if is_image else PayloadKind.DOCUMENT
             payload = InputPayload(
-                kind=PayloadKind.DOCUMENT,
+                kind=kind,
                 file_path=file_path,
-                filename=message.document.file_name,
-                mime_type=message.document.mime_type,
+                filename=filename,
+                mime_type=mime or ("image/jpeg" if is_image else None),
+                text=message.caption,
                 is_pro=_is_pro(message.caption, None),
             )
             await _execute_and_reply(message, payload, runner, status_msg)

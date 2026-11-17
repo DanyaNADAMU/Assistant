@@ -19,6 +19,7 @@ dependencies = [
     "trafilatura>=2.0.0",
     "aiofiles>=24.1.0",
     "python-magic>=0.4.27; sys_platform != 'win32'",
+    "pillow>=13.0.0",
 ]
 
 [project.optional-dependencies]
