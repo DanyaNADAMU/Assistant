@@ -11,7 +11,7 @@ from pathlib import Path
 from summary_bot.config import TaskCategory, settings
 from summary_bot.core.models.result import ProcessingResult
 from summary_bot.core.models.user_preferences import UserPreferences
-from summary_bot.core.ports.cache import CacheStats, ResponseCachePort
+from summary_bot.core.ports.cache import CachedSummaryItem, CacheStats, ResponseCachePort
 
 logger = logging.getLogger(__name__)
 
@@ -299,6 +299,81 @@ class SqliteResponseCacheRepository(ResponseCachePort):
 
     async def get_stats(self) -> CacheStats:
         return await asyncio.to_thread(self._get_stats_sync)
+
+    def _search_summaries_sync(
+        self,
+        query: str = "",
+        limit: int = 10,
+    ) -> list[CachedSummaryItem]:
+        self._ensure_dir_and_schema()
+        clean_limit = max(1, min(limit, 50))
+        clean_query = query.strip()
+
+        with sqlite3.connect(self._db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            if clean_query:
+                cursor.execute(
+                    """
+                    SELECT content_hash, category, summary, key_takeaways,
+                           model_used, hit_count, created_at, language, depth, format
+                    FROM summary_cache
+                    WHERE summary LIKE '%' || ? || '%'
+                       OR key_takeaways LIKE '%' || ? || '%'
+                       OR content_hash LIKE '%' || ? || '%'
+                    ORDER BY created_at DESC
+                    LIMIT ?;
+                    """,
+                    (clean_query, clean_query, clean_query, clean_limit),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT content_hash, category, summary, key_takeaways,
+                           model_used, hit_count, created_at, language, depth, format
+                    FROM summary_cache
+                    ORDER BY created_at DESC
+                    LIMIT ?;
+                    """,
+                    (clean_limit,),
+                )
+
+            rows = cursor.fetchall()
+            results: list[CachedSummaryItem] = []
+            for row in rows:
+                try:
+                    takeaways = (
+                        json.loads(row["key_takeaways"]) if row["key_takeaways"] else []
+                    )
+                    if not isinstance(takeaways, list):
+                        takeaways = [str(takeaways)]
+                except Exception:
+                    takeaways = []
+
+                results.append(
+                    CachedSummaryItem(
+                        content_hash=str(row["content_hash"]),
+                        category=str(row["category"]),
+                        summary=str(row["summary"]),
+                        key_takeaways=[str(t) for t in takeaways],
+                        model_used=str(row["model_used"]),
+                        hit_count=int(row["hit_count"]),
+                        created_at=str(row["created_at"]),
+                        language=str(row["language"]),
+                        depth=str(row["depth"]),
+                        format=str(row["format"]),
+                    )
+                )
+            return results
+
+    async def search_summaries(
+        self,
+        query: str = "",
+        limit: int = 10,
+    ) -> list[CachedSummaryItem]:
+        """Search cached summaries by query substring or retrieve recent ones."""
+        return await asyncio.to_thread(self._search_summaries_sync, query, limit)
 
 
 # Singleton instance shared across the application runtime

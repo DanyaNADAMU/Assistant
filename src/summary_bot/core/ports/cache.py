@@ -8,6 +8,39 @@ from summary_bot.core.models.user_preferences import UserPreferences
 
 
 @dataclass(frozen=True)
+class CachedSummaryItem:
+    """Preview of a cached summary suitable for search and inline listings."""
+
+    content_hash: str
+    category: str
+    summary: str
+    key_takeaways: list[str]
+    model_used: str
+    hit_count: int
+    created_at: str
+    language: str
+    depth: str
+    format: str
+
+    def to_processing_result(self) -> ProcessingResult:
+        """Convert cached item into full ProcessingResult."""
+        from summary_bot.config import TaskCategory
+
+        try:
+            cat = TaskCategory(self.category)
+        except ValueError:
+            cat = TaskCategory.TEXT_DOCS
+
+        return ProcessingResult(
+            category=cat,
+            summary=self.summary,
+            key_takeaways=self.key_takeaways,
+            model_used=self.model_used,
+            from_cache=True,
+        )
+
+
+@dataclass(frozen=True)
 class CacheStats:
     """Aggregated cache statistics."""
 
@@ -77,4 +110,12 @@ class ResponseCachePort(Protocol):
 
     async def get_stats(self) -> CacheStats:
         """Retrieve current cache metrics."""
+        ...
+
+    async def search_summaries(
+        self,
+        query: str = "",
+        limit: int = 10,
+    ) -> list[CachedSummaryItem]:
+        """Search cached summaries by query substring or retrieve recent ones."""
         ...
