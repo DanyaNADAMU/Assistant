@@ -67,7 +67,7 @@ runs:
         # 1. Authenticate with container registry if credentials are provided
         if [ -n "${{ inputs.registry_user }}" ] && [ -n "${{ inputs.registry_password }}" ]; then
           echo "==> Authenticating Podman with registry ${{ inputs.registry_url }}..."
-          ssh $SSH_OPTS "$SSH_TARGET" "podman login ${{ inputs.registry_url }} --username '${{ inputs.registry_user }}' --password '${{ inputs.registry_password }}' || true"
+          printf '%s\n' "${{ inputs.registry_password }}" | ssh $SSH_OPTS "$SSH_TARGET" "podman login ${{ inputs.registry_url }} --username '${{ inputs.registry_user }}' --password-stdin || true"
         fi
 
         # 2. Pull latest container image

@@ -33,17 +33,24 @@ jobs:
   build:
     name: Build & Push Container Image
     runs-on: docker
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Configure Registry Credentials for Kaniko
         run: |
-          mkdir -p ~/.docker
-          AUTH=$(printf '%s:%s' "${{ github.actor }}" "${{ secrets.GITHUB_TOKEN }}" | base64 | tr -d '\n')
-          cat <<EOF > ~/.docker/config.json
+          mkdir -p "${{ github.workspace }}/.docker"
+          REGISTRY_PASS="${{ secrets.REGISTRY_TOKEN || secrets.GITHUB_TOKEN }}"
+          AUTH=$(printf '%s:%s' "DanyaNADAMU" "${REGISTRY_PASS}" | base64 | tr -d '\n')
+          cat <<EOF > "${{ github.workspace }}/.docker/config.json"
           {
             "auths": {
+              "${{ env.REGISTRY }}": {
+                "auth": "${AUTH}"
+              },
               "https://${{ env.REGISTRY }}": {
                 "auth": "${AUTH}"
               }
@@ -53,6 +60,8 @@ jobs:
 
       - name: Build and Push Image via Kaniko
         uses: docker://gcr.io/kaniko-project/executor:debug
+        env:
+          DOCKER_CONFIG: ${{ github.workspace }}/.docker
         with:
           args: >-
             --context=dir://${{ github.workspace }}
@@ -61,13 +70,17 @@ jobs:
             --destination=${{ env.IMAGE_TAGGED }}
             --cache=true
 
+      - name: Cleanup Registry Credentials
+        if: always()
+        run: rm -rf "${{ github.workspace }}/.docker"
+
   deploy-test:
     name: Deploy to Staging (Test)
     needs: build
     runs-on: docker
     if: >-
       (github.event_name == 'workflow_dispatch' && (github.event.inputs.target == 'test' || github.event.inputs.target == 'both')) ||
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/feat/'))
+      (github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/feat/') || startsWith(github.ref, 'refs/heads/fix/')))
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -82,8 +95,8 @@ jobs:
           service_name: "SummaryBot"
           image: ${{ env.IMAGE_NAME }}
           registry_url: ${{ env.REGISTRY }}
-          registry_user: ${{ github.actor }}
-          registry_password: ${{ secrets.GITHUB_TOKEN }}
+          registry_user: "DanyaNADAMU"
+          registry_password: ${{ secrets.REGISTRY_TOKEN || secrets.GITHUB_TOKEN }}
           env_content: ${{ secrets.TEST_ENV }}
           quadlet_file: "SummaryBot.test.container"
 
@@ -108,7 +121,7 @@ jobs:
           service_name: "SummaryBot"
           image: ${{ env.IMAGE_NAME }}
           registry_url: ${{ env.REGISTRY }}
-          registry_user: ${{ github.actor }}
-          registry_password: ${{ secrets.GITHUB_TOKEN }}
+          registry_user: "DanyaNADAMU"
+          registry_password: ${{ secrets.REGISTRY_TOKEN || secrets.GITHUB_TOKEN }}
           env_content: ${{ secrets.SUMMARYBOT_ENV }}
           quadlet_file: "SummaryBot.container"
