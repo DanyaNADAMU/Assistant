@@ -12,7 +12,8 @@ on:
       - "uv.lock"
       - "Containerfile"
       - "SummaryBot*.container"
-      - ".forgejo/workflows/deploy.yml"
+      - ".forgejo/**"
+      - ".github/**"
   workflow_dispatch:
     inputs:
       target:
