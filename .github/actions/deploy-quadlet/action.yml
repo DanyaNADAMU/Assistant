@@ -81,10 +81,7 @@ runs:
         # 4. Deploy environment file if provided
         if [ -n "${{ inputs.env_content }}" ]; then
           echo "==> Updating ~/stacks/${{ inputs.service_name }}/.env..."
-          ssh $SSH_OPTS "$SSH_TARGET" "cat <<'ENV_EOF' > ~/stacks/${{ inputs.service_name }}/.env
-${{ inputs.env_content }}
-ENV_EOF
-chmod 600 ~/stacks/${{ inputs.service_name }}/.env"
+          printf '%s\n' "${{ inputs.env_content }}" | ssh $SSH_OPTS "$SSH_TARGET" "cat > ~/stacks/${{ inputs.service_name }}/.env && chmod 600 ~/stacks/${{ inputs.service_name }}/.env"
         fi
 
         # 5. Deploy Quadlet container definition
