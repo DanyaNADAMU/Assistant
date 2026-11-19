@@ -65,5 +65,5 @@ journalctl --user -u Assistant -f
 ---
 
 ## 🔐 Security & Release Invariants
-* **Production Gate**: Deployment to production is strictly forbidden without the user explicitly sending `"sdsd"` in chat.
+* **Release Gate**: Production deploys run only on signed `v*` tags via GitHub Actions (`release.yml`), which verifies the `CHANGELOG.md` release section.
 * **Secret Management**: Credentials (`TELEGRAM_BOT_TOKEN`, `OPENROUTER_API_KEY`) reside in Ansible Vault (`Infra` repository SSoT) and mirror to VaultWarden.

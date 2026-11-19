@@ -4,7 +4,7 @@ Status: **Active**
 Trajectory: Core-First Multimodal Ingestion Pipeline
 
 ## Critical Constraints
-- **Absolute Gate**: NEVER deploy to production without explicit user prompt string `"sdsd"`. Deployments target strictly the staging testbed (`berg-test`, port 4021) under user `apps`.
+- **Release Contours**: Feature/fix branches deploy to staging (Actions); production deploys run only on signed `v*` tags via GitHub Actions.
 - **Network Isolation**: Dedicated `apps-proxy-gateway` for user `apps` on testbed. Never share agent's personal proxy container.
 
 ---
@@ -91,5 +91,5 @@ Trajectory: Core-First Multimodal Ingestion Pipeline
   - Pull Request review on Forgejo (`feat/foundation-and-core` -> `main`)
   - Forgejo Actions test runner pipeline
   - Bitcoin OTS synchronization
-- [ ] **Production Rollout Gate**:
-  - Await explicit user prompt string `"sdsd"` before deploying to production infrastructure
+- [x] **Production Rollout**:
+  - Signed release tag `v*` triggers `release.yml` GitHub Actions deploy to production (Ice)

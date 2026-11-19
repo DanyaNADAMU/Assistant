@@ -8,7 +8,7 @@ Assistant is a multimodal Telegram bot and CLI suite designed to ingest all medi
 
 ## Non-Negotiables
 
-- **Absolute Production Deployment Gate**: NEVER deploy to production under any circumstances without explicit user consent provided as the exact string `"sdsd"` in chat. Production is the **Ice** host; staging is the **Actions** LXC sandbox on Ice.
+- **Production & Staging Contours**: Production runs on the **Ice** host; staging runs on the **Actions** LXC sandbox on Ice. Production deploys flow through signed release tags via GitHub Actions (`release.yml`); feature/fix branches deploy only to staging.
 - **Staging Isolation & User Separation**: Assistant runs strictly under user `apps` on both hosts (test `Actions`, production `Ice`). No shared or per-agent proxy containers.
 - **Core-First Architecture**: Development proceeds strictly in order: Domain Core ➔ CLI / TUI ➔ Telegram interface ➔ Web. Core never imports interfaces or adapters.
 - **Resilient Model Routing**: Every task category (`AUDIO_VIDEO`, `TEXT_DOCS`, `VISION`, `MICRO`, `PRO`) defines a `Primary` and a `Fallback` model. The executor must automatically fail over on HTTP 429 (Rate Limits), HTTP 5xx, or network timeouts.
