@@ -18,6 +18,7 @@ from assistant.core.services.batch import BatchSummarizer
 from assistant.core.services.runner import ResilientModelRunner
 from assistant.interfaces.telegram.handlers.callbacks import router as callbacks_router
 from assistant.interfaces.telegram.handlers.commands import router as commands_router
+from assistant.interfaces.telegram.handlers.generation import router as generation_router
 from assistant.interfaces.telegram.handlers.inline import router as inline_router
 from assistant.interfaces.telegram.handlers.media import router as media_router
 
@@ -46,6 +47,7 @@ def create_dispatcher(
     dp.include_router(commands_router)
     dp.include_router(callbacks_router)
     dp.include_router(inline_router)
+    dp.include_router(generation_router)
     dp.include_router(media_router)
 
     return dp
