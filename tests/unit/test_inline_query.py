@@ -6,12 +6,12 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from aiogram.types import InlineQuery, InlineQueryResultArticle, User
 
-from summary_bot.adapters.storage.cache_repository import SqliteResponseCacheRepository
-from summary_bot.config import Settings, TaskCategory
-from summary_bot.core.models.payload import InputPayload, PayloadKind
-from summary_bot.core.models.result import ProcessingResult
-from summary_bot.core.services.runner import ResilientModelRunner
-from summary_bot.interfaces.telegram.handlers.inline import handle_inline_query
+from assistant.adapters.storage.cache_repository import SqliteResponseCacheRepository
+from assistant.config import Settings, TaskCategory
+from assistant.core.models.payload import InputPayload, PayloadKind
+from assistant.core.models.result import ProcessingResult
+from assistant.core.services.runner import ResilientModelRunner
+from assistant.interfaces.telegram.handlers.inline import handle_inline_query
 
 
 class MockGateway:
@@ -109,7 +109,7 @@ async def test_inline_query_empty_returns_recent_and_guide(
     )
     await test_cache.put_summary("recent_hash", is_pro=False, result=res)
     monkeypatch.setattr(
-        "summary_bot.interfaces.telegram.handlers.inline.response_cache",
+        "assistant.interfaces.telegram.handlers.inline.response_cache",
         test_cache,
     )
 
@@ -118,8 +118,8 @@ async def test_inline_query_empty_returns_recent_and_guide(
         return_value=User(
             id=123,
             is_bot=True,
-            first_name="SummaryBot",
-            username="SummaryBot",
+            first_name="Assistant",
+            username="Assistant",
         )
     )
 
@@ -163,8 +163,8 @@ async def test_inline_query_cached_url(
         return_value=User(
             id=123,
             is_bot=True,
-            first_name="SummaryBot",
-            username="SummaryBot",
+            first_name="Assistant",
+            username="Assistant",
         )
     )
 
@@ -198,8 +198,8 @@ async def test_inline_query_uncached_url(
         return_value=User(
             id=123,
             is_bot=True,
-            first_name="SummaryBot",
-            username="SummaryBot",
+            first_name="Assistant",
+            username="Assistant",
         )
     )
 
@@ -232,7 +232,7 @@ async def test_inline_query_search_text(
     )
     await test_cache.put_summary("hash_k8s", is_pro=False, result=res)
     monkeypatch.setattr(
-        "summary_bot.interfaces.telegram.handlers.inline.response_cache",
+        "assistant.interfaces.telegram.handlers.inline.response_cache",
         test_cache,
     )
 
@@ -241,8 +241,8 @@ async def test_inline_query_search_text(
         return_value=User(
             id=123,
             is_bot=True,
-            first_name="SummaryBot",
-            username="SummaryBot",
+            first_name="Assistant",
+            username="Assistant",
         )
     )
 

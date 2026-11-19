@@ -1,4 +1,4 @@
-# Multi-stage production build for SummaryBot
+# Multi-stage production build for Assistant
 FROM debian:bookworm-slim AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -35,7 +35,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 # Copy application source code
 COPY src ./src
 
-# Install summary-bot project into virtualenv
+# Install assistant project into virtualenv
 RUN uv sync --frozen --no-dev
 
 # Set ownership
@@ -43,4 +43,4 @@ RUN chown -R apps:apps /app /opt/uv
 
 USER apps
 
-ENTRYPOINT ["summary-bot", "tg-serve"]
+ENTRYPOINT ["assistant", "tg-serve"]

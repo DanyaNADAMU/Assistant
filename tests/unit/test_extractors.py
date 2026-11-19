@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from summary_bot.adapters.extractors.audio import AudioExtractor, probe_audio_duration
-from summary_bot.adapters.extractors.document import DocumentExtractor
-from summary_bot.adapters.extractors.web import WebExtractor
-from summary_bot.config import TaskCategory
-from summary_bot.core.models.payload import InputPayload, PayloadKind
-from summary_bot.core.models.result import ProcessingResult
+from assistant.adapters.extractors.audio import AudioExtractor, probe_audio_duration
+from assistant.adapters.extractors.document import DocumentExtractor
+from assistant.adapters.extractors.web import WebExtractor
+from assistant.config import TaskCategory
+from assistant.core.models.payload import InputPayload, PayloadKind
+from assistant.core.models.result import ProcessingResult
 
 
 @pytest.mark.asyncio

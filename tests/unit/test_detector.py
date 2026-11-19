@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
-from summary_bot.config import TaskCategory
-from summary_bot.core.models.payload import InputPayload, PayloadKind
-from summary_bot.core.services.detector import CategoryDetector
+from assistant.config import TaskCategory
+from assistant.core.models.payload import InputPayload, PayloadKind
+from assistant.core.services.detector import CategoryDetector
 
 
 def test_detect_pro_override() -> None:

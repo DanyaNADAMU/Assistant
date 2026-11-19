@@ -2,16 +2,16 @@
 
 import pytest
 
-from summary_bot.adapters.storage.preferences_repository import SqlitePreferencesRepository
-from summary_bot.config import TaskCategory
-from summary_bot.core.models.user_preferences import (
+from assistant.adapters.storage.preferences_repository import SqlitePreferencesRepository
+from assistant.config import TaskCategory
+from assistant.core.models.user_preferences import (
     OutputFormat,
     OutputLanguage,
     SummaryDepth,
     UserPreferences,
 )
-from summary_bot.core.services.prompts import get_prompt_for_category
-from summary_bot.interfaces.telegram.keyboards import get_settings_keyboard
+from assistant.core.services.prompts import get_prompt_for_category
+from assistant.interfaces.telegram.keyboards import get_settings_keyboard
 
 
 class TestUserPreferencesModel:

@@ -6,9 +6,9 @@ from unittest.mock import MagicMock
 import pytest
 from PIL import Image
 
-from summary_bot.adapters.extractors.document import DocumentExtractor
-from summary_bot.adapters.extractors.vision import MAX_IMAGE_DIMENSION, VisionExtractor
-from summary_bot.core.models.payload import InputPayload, PayloadKind
+from assistant.adapters.extractors.document import DocumentExtractor
+from assistant.adapters.extractors.vision import MAX_IMAGE_DIMENSION, VisionExtractor
+from assistant.core.models.payload import InputPayload, PayloadKind
 
 
 def create_test_image_bytes(
@@ -135,7 +135,7 @@ async def test_document_extractor_scanned_pdf_fallback() -> None:
     mock_page.images = [mock_image]
 
     # Patch PdfReader in test
-    import summary_bot.adapters.extractors.document as doc_mod
+    import assistant.adapters.extractors.document as doc_mod
 
     orig_reader = doc_mod.PdfReader
     try:

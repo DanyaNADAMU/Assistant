@@ -2,14 +2,14 @@
 
 import pytest
 
-from summary_bot.config import TaskCategory
-from summary_bot.core.services.context_store import SummaryContext, SummaryContextStore
-from summary_bot.core.services.exporter import (
+from assistant.config import TaskCategory
+from assistant.core.services.context_store import SummaryContext, SummaryContextStore
+from assistant.core.services.exporter import (
     DocumentExporter,
     ExportFormat,
     document_exporter,
 )
-from summary_bot.interfaces.telegram.keyboards import (
+from assistant.interfaces.telegram.keyboards import (
     get_export_keyboard,
     get_summary_keyboard,
 )
@@ -85,7 +85,7 @@ def test_render_html(sample_context: SummaryContext) -> None:
     assert "<li>Rootless Podman Quadlets isolate production containers safely.</li>" in html_content
     assert "🎙️ Стенограмма речи" in html_content
     assert "<pre>" in html_content
-    assert "SummaryBot" in html_content
+    assert "Assistant" in html_content
 
 
 def test_render_text(sample_context: SummaryContext) -> None:

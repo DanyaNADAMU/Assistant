@@ -1,6 +1,6 @@
 """Tests for configuration settings and environment token resolution."""
 
-from summary_bot.config import Settings
+from assistant.config import Settings
 
 
 def test_effective_bot_token_production_default() -> None:

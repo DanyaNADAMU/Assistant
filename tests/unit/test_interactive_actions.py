@@ -5,14 +5,14 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from aiogram.types import Message
 
-from summary_bot.config import Settings, TaskCategory
-from summary_bot.core.models.payload import InputPayload
-from summary_bot.core.models.result import ProcessingResult
-from summary_bot.core.services.context_store import SummaryContext, SummaryContextStore
-from summary_bot.core.services.prompts import get_refinement_prompt
-from summary_bot.core.services.runner import ResilientModelRunner
-from summary_bot.interfaces.telegram.handlers.callbacks import handle_summary_action
-from summary_bot.interfaces.telegram.keyboards import get_summary_keyboard
+from assistant.config import Settings, TaskCategory
+from assistant.core.models.payload import InputPayload
+from assistant.core.models.result import ProcessingResult
+from assistant.core.services.context_store import SummaryContext, SummaryContextStore
+from assistant.core.services.prompts import get_refinement_prompt
+from assistant.core.services.runner import ResilientModelRunner
+from assistant.interfaces.telegram.handlers.callbacks import handle_summary_action
+from assistant.interfaces.telegram.keyboards import get_summary_keyboard
 
 
 class MockGateway:
@@ -118,7 +118,7 @@ def test_refinement_prompts() -> None:
 
 @pytest.mark.asyncio
 async def test_callback_handler_workflow() -> None:
-    from summary_bot.core.services.context_store import context_store
+    from assistant.core.services.context_store import context_store
 
     ctx = SummaryContext.create(
         original_text="Original Message Formatted",
