@@ -48,7 +48,11 @@ class Settings(BaseSettings):
     test_telegram_bot_token: str = Field(default="", alias="TEST_TELEGRAM_BOT_TOKEN")
 
     @field_validator(
-        "telegram_bot_token", "test_telegram_bot_token", "openrouter_api_key", mode="before"
+        "telegram_bot_token",
+        "test_telegram_bot_token",
+        "openrouter_api_key",
+        "venice_api_key",
+        mode="before",
     )
     @classmethod
     def sanitize_secrets(cls, v: str | None) -> str | None:
@@ -129,6 +133,43 @@ class Settings(BaseSettings):
                 return (self.model_micro_primary, self.model_micro_fallback)
             case TaskCategory.PRO:
                 return (self.model_pro_primary, self.model_pro_fallback)
+
+    # ==========================================================================
+    # Venice.AI media generation settings (uncensored image/video backend)
+    # ==========================================================================
+    venice_api_key: str = Field(default="", alias="VENICE_API_KEY")
+    venice_base_url: str = Field(default="https://api.venice.ai/api/v1", alias="VENICE_BASE_URL")
+    venice_http_referer: str = Field(default="https://nada.mu", alias="VENICE_HTTP_REFERER")
+    venice_app_title: str = Field(default="Assistant", alias="VENICE_APP_TITLE")
+
+    # Image generation defaults (configurable per `.env`)
+    gen_image_model: str = Field(default="venice-sd35", alias="GEN_IMAGE_MODEL")
+    gen_image_model_photoreal: str = Field(
+        default="flux-3-image", alias="GEN_IMAGE_MODEL_PHOTOREAL"
+    )
+    gen_image_model_anime: str = Field(default="wai-Illustrious", alias="GEN_IMAGE_MODEL_ANIME")
+    gen_image_width: int = Field(default=1024, alias="GEN_IMAGE_WIDTH")
+    gen_image_height: int = Field(default=1024, alias="GEN_IMAGE_HEIGHT")
+    gen_image_format: str = Field(default="png", alias="GEN_IMAGE_FORMAT")
+    gen_image_negative_prompt: str = Field(
+        default="blurry, low quality, distorted anatomy, text, watermark",
+        alias="GEN_IMAGE_NEGATIVE_PROMPT",
+    )
+
+    # Video generation defaults (configurable per `.env`)
+    gen_video_text_model: str = Field(default="wan-2-7-text-to-video", alias="GEN_VIDEO_TEXT_MODEL")
+    gen_video_image_model: str = Field(
+        default="wan-2-7-image-to-video", alias="GEN_VIDEO_IMAGE_MODEL"
+    )
+    gen_video_duration: str = Field(default="5s", alias="GEN_VIDEO_DURATION")
+    gen_video_resolution: str = Field(default="720p", alias="GEN_VIDEO_RESOLUTION")
+    gen_video_aspect_ratio: str = Field(default="16:9", alias="GEN_VIDEO_ASPECT_RATIO")
+    gen_video_negative_prompt: str = Field(
+        default="low resolution, error, worst quality, low quality, defects",
+        alias="GEN_VIDEO_NEGATIVE_PROMPT",
+    )
+    gen_video_poll_interval: float = Field(default=5.0, alias="GEN_VIDEO_POLL_INTERVAL")
+    gen_video_timeout: float = Field(default=300.0, alias="GEN_VIDEO_TIMEOUT")
 
 
 settings = Settings()

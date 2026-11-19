@@ -1,5 +1,12 @@
 """Core domain models exports."""
 
+from assistant.core.models.generated import (
+    GeneratedMedia,
+    GeneratedMediaError,
+    GeneratedMediaKind,
+    GeneratedMediaResult,
+)
+from assistant.core.models.intent import RequestIntent
 from assistant.core.models.payload import InputPayload, PayloadKind
 from assistant.core.models.result import ProcessingResult
 from assistant.core.models.user_preferences import (
@@ -10,11 +17,16 @@ from assistant.core.models.user_preferences import (
 )
 
 __all__ = [
+    "GeneratedMedia",
+    "GeneratedMediaError",
+    "GeneratedMediaKind",
+    "GeneratedMediaResult",
     "InputPayload",
     "OutputFormat",
     "OutputLanguage",
     "PayloadKind",
     "ProcessingResult",
+    "RequestIntent",
     "SummaryDepth",
     "UserPreferences",
 ]

@@ -16,11 +16,13 @@ from assistant.adapters.extractors.vision import VisionExtractor
 from assistant.adapters.extractors.web import WebExtractor
 from assistant.adapters.openrouter.client import OpenRouterClient
 from assistant.adapters.storage import response_cache
+from assistant.adapters.venice import VeniceClient
 from assistant.config import TaskCategory, settings
 from assistant.core.models.payload import InputPayload, PayloadKind
 from assistant.core.services.batch import BatchSummarizer
 from assistant.core.services.context_store import SummaryContext
 from assistant.core.services.exporter import document_exporter
+from assistant.core.services.media_generator import MediaGenerator
 from assistant.core.services.runner import ResilientModelRunner
 from assistant.core.services.telemetry import telemetry_service
 from assistant.interfaces.telegram.bot import start_telegram_bot
@@ -240,6 +242,112 @@ def models() -> None:
         table.add_row(cat.value, primary, fallback)
 
     console.print(table)
+
+
+@app.command()
+def image(
+    prompt: Annotated[str, typer.Argument(help="Text description of the image to generate")],
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Save the generated image to a file")
+    ] = None,
+    model: Annotated[
+        str | None, typer.Option("--model", "-m", help="Override the Venice image model")
+    ] = None,
+) -> None:
+    """Generate an image with Venice.AI (uncensored) from a text prompt."""
+
+    async def _async_generate() -> None:
+        venice = VeniceClient(settings=settings)
+        generator = MediaGenerator(venice=venice, settings=settings)
+
+        effective_model = model or settings.gen_image_model
+        with console.status(
+            f"[bold magenta]Генерация изображения ({effective_model})...", spinner="dots"
+        ):
+            media = await generator.generate_image(prompt, output_path=output)
+
+        if output is None:
+            ext = media.media.default_extension
+            out = Path(f"generated-image.{ext}")
+            media.media.to_file(out)
+        else:
+            out = output
+
+        console.print(
+            Panel(
+                f"[bold]Готово![/bold] Изображение сгенерировано моделью [cyan]{media.media.model_used}[/cyan].",
+                title="🖼️ Assistant — Генерация изображения",
+                border_style="magenta",
+            )
+        )
+        console.print(
+            f"[dim]→ Сохранено: {out} ({len(media.media.content_bytes):,} байт, {media.media.elapsed_seconds:.1f}s)[/dim]"
+        )
+
+    asyncio.run(_async_generate())
+
+
+@app.command()
+def video(
+    prompt: Annotated[str, typer.Argument(help="Text description of the video to generate")],
+    from_image: Annotated[
+        Path | None,
+        typer.Option("--from-image", "-i", help="Optional source image for image-to-video"),
+    ] = None,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Save the generated video to a file")
+    ] = None,
+    model: Annotated[
+        str | None, typer.Option("--model", "-m", help="Override the Venice video model")
+    ] = None,
+) -> None:
+    """Generate a video with Venice.AI (uncensored) from a text prompt (and optional image)."""
+
+    async def _async_generate() -> None:
+        venice = VeniceClient(settings=settings)
+        generator = MediaGenerator(venice=venice, settings=settings)
+
+        from_bytes: bytes | None = None
+        from_mime: str | None = None
+        if from_image is not None:
+            if not from_image.exists():
+                raise typer.BadParameter(f"Source image not found: {from_image}")
+            from_bytes = from_image.read_bytes()
+            from_mime = "image/webp" if from_image.suffix.lower() == ".webp" else "image/png"
+
+        effective_model = model or (
+            settings.gen_video_image_model
+            if from_bytes is not None
+            else settings.gen_video_text_model
+        )
+        with console.status(
+            f"[bold magenta]Генерация видео ({effective_model})...", spinner="dots"
+        ):
+            media = await generator.generate_video(
+                prompt,
+                from_image_bytes=from_bytes,
+                from_image_mime=from_mime,
+                output_path=output,
+            )
+
+        if output is None:
+            out = Path(f"generated-video.{media.media.default_extension}")
+            media.media.to_file(out)
+        else:
+            out = output
+
+        console.print(
+            Panel(
+                f"[bold]Готово![/bold] Видео сгенерировано моделью [cyan]{media.media.model_used}[/cyan].",
+                title="🎬 Assistant — Генерация видео",
+                border_style="magenta",
+            )
+        )
+        console.print(
+            f"[dim]→ Сохранено: {out} ({len(media.media.content_bytes):,} байт, {media.media.elapsed_seconds:.1f}s)[/dim]"
+        )
+
+    asyncio.run(_async_generate())
 
 
 @app.command("tg-serve")
