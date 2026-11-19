@@ -2,11 +2,11 @@
 
 import pytest
 
-from summary_bot.adapters.openrouter.client import OpenRouterAPIError
-from summary_bot.config import Settings, TaskCategory
-from summary_bot.core.models.payload import InputPayload, PayloadKind
-from summary_bot.core.models.result import ProcessingResult
-from summary_bot.core.services.runner import ResilientModelRunner
+from assistant.adapters.openrouter.client import OpenRouterAPIError
+from assistant.config import Settings, TaskCategory
+from assistant.core.models.payload import InputPayload, PayloadKind
+from assistant.core.models.result import ProcessingResult
+from assistant.core.services.runner import ResilientModelRunner
 
 
 class MockGateway:

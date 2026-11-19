@@ -4,18 +4,18 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from summary_bot.config import Settings, TaskCategory
-from summary_bot.core.models.payload import InputPayload
-from summary_bot.core.models.result import ProcessingResult
-from summary_bot.core.models.user_preferences import OutputLanguage, SummaryDepth, UserPreferences
-from summary_bot.core.ports.model_gateway import ModelGatewayPort
-from summary_bot.core.services.batch import (
+from assistant.config import Settings, TaskCategory
+from assistant.core.models.payload import InputPayload
+from assistant.core.models.result import ProcessingResult
+from assistant.core.models.user_preferences import OutputLanguage, SummaryDepth, UserPreferences
+from assistant.core.ports.model_gateway import ModelGatewayPort
+from assistant.core.services.batch import (
     BatchSummarizer,
     extract_urls,
 )
-from summary_bot.core.services.context_store import SummaryContext
-from summary_bot.core.services.exporter import DocumentExporter, ExportFormat
-from summary_bot.core.services.runner import ResilientModelRunner
+from assistant.core.services.context_store import SummaryContext
+from assistant.core.services.exporter import DocumentExporter, ExportFormat
+from assistant.core.services.runner import ResilientModelRunner
 
 
 def test_extract_urls_various_formats() -> None:

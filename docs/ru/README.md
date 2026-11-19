@@ -1,6 +1,6 @@
-# SummaryBot — Руководство пользователя и администратора
+# Assistant — Руководство пользователя и администратора
 
-**SummaryBot** — всеядный мультимодальный Telegram-бот и CLI-утилита для саммаризации, расшифровки речи (STT) и анализа любых медиаформатов.
+**Assistant** — всеядный мультимодальный Telegram-бот и CLI-утилита для саммаризации, расшифровки речи (STT) и анализа любых медиаформатов.
 
 ---
 
@@ -27,37 +27,39 @@
 
 ```bash
 # Проверить матрицу настроенных моделей
-uv run summary-bot models
+uv run assistant models
 
 # Обработать файл (аудио, видео, PDF, фото, текст)
-uv run summary-bot process document.pdf
+uv run assistant process document.pdf
 
 # Обработать ссылку в Pro-режиме с выводом в файл
-uv run summary-bot process "https://example.com/article" --pro -o summary.md
+uv run assistant process "https://example.com/article" --pro -o summary.md
 
 # Запустить демон Telegram-бота
-uv run summary-bot tg-serve
+uv run assistant tg-serve
 ```
 
 ---
 
-## 🚀 Развертывание на сервере (Test / Staging)
+## 🚀 Развертывание на сервере
 
-Бот развертывается как rootless Podman-контейнер под управлением systemd Quadlet:
+Бот развертывается как rootless Podman-контейнер под управлением systemd Quadlet.
+GitHub Actions собирает образ в GHCR и выкатывает его по SSH через обёртку
+forced-command с фиксацией digest.
 
-1. **Пользователь**: `apps` на хосте `berg-test` (порт 4021).
-2. **Сетевой шлюз**: выделенный контейнер `apps-proxy-gateway` (AmneziaWG) для гарантированного обхода внешних блокировок.
-3. **Файлы стека**:
-   * `/home/apps/stacks/SummaryBot/Containerfile`
-   * `/home/apps/stacks/SummaryBot/SummaryBot.container`
-   * `/home/apps/stacks/SummaryBot/.env` (права `0600`)
+* **Тестовый стенд**: пользователь `apps` на **Actions** (LXC-контейнер на Ice).
+* **Продакшн**: пользователь `apps` на **Ice**.
+* **Структура стека** (провижится через Infra):
+  * quadlet `/etc/containers/systemd/users/<uid>/assistant.container`
+  * env `~/stacks/Assistant/.env` (права `0600`)
+  * data `~/stacks/Assistant/data`
 
 ### Управление сервисом
 ```bash
 systemctl --user daemon-reload
-systemctl --user start SummaryBot
-systemctl --user status SummaryBot
-journalctl --user -u SummaryBot -f
+systemctl --user start Assistant
+systemctl --user status Assistant
+journalctl --user -u Assistant -f
 ```
 
 ---

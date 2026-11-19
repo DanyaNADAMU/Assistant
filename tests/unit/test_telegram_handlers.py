@@ -1,11 +1,11 @@
 """Unit tests for Telegram interface and handler routing."""
 
-from summary_bot.config import Settings, TaskCategory
-from summary_bot.core.models.payload import InputPayload
-from summary_bot.core.models.result import ProcessingResult
-from summary_bot.core.services.runner import ResilientModelRunner
-from summary_bot.interfaces.telegram.bot import create_dispatcher
-from summary_bot.interfaces.telegram.handlers.media import _is_pro
+from assistant.config import Settings, TaskCategory
+from assistant.core.models.payload import InputPayload
+from assistant.core.models.result import ProcessingResult
+from assistant.core.services.runner import ResilientModelRunner
+from assistant.interfaces.telegram.bot import create_dispatcher
+from assistant.interfaces.telegram.handlers.media import _is_pro
 
 
 class DummyGateway:
@@ -37,4 +37,6 @@ def test_create_dispatcher_routes() -> None:
     dp = create_dispatcher(runner)
 
     assert dp["runner"] == runner
-    assert len(dp.sub_routers) == 4  # commands_router, callbacks_router, inline_router, and media_router
+    assert (
+        len(dp.sub_routers) == 4
+    )  # commands_router, callbacks_router, inline_router, and media_router

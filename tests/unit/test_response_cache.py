@@ -4,17 +4,17 @@ from pathlib import Path
 
 import pytest
 
-from summary_bot.adapters.storage.cache_repository import SqliteResponseCacheRepository
-from summary_bot.config import Settings, TaskCategory
-from summary_bot.core.models.payload import InputPayload, PayloadKind
-from summary_bot.core.models.result import ProcessingResult
-from summary_bot.core.models.user_preferences import (
+from assistant.adapters.storage.cache_repository import SqliteResponseCacheRepository
+from assistant.config import Settings, TaskCategory
+from assistant.core.models.payload import InputPayload, PayloadKind
+from assistant.core.models.result import ProcessingResult
+from assistant.core.models.user_preferences import (
     OutputFormat,
     OutputLanguage,
     SummaryDepth,
     UserPreferences,
 )
-from summary_bot.core.services.runner import ResilientModelRunner
+from assistant.core.services.runner import ResilientModelRunner
 
 
 class SpyGateway:

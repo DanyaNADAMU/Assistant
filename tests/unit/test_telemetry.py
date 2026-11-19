@@ -7,13 +7,13 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from aiogram.types import CallbackQuery, Message, User
 
-from summary_bot.adapters.storage.preferences_repository import SqlitePreferencesRepository
-from summary_bot.core.models.user_preferences import UserPreferences
-from summary_bot.core.ports.cache import CacheStats
-from summary_bot.core.services.telemetry import TelemetryService, TelemetrySnapshot
-from summary_bot.interfaces.telegram.handlers.callbacks import handle_status_action
-from summary_bot.interfaces.telegram.handlers.commands import cmd_status
-from summary_bot.interfaces.telegram.keyboards import get_status_keyboard
+from assistant.adapters.storage.preferences_repository import SqlitePreferencesRepository
+from assistant.core.models.user_preferences import UserPreferences
+from assistant.core.ports.cache import CacheStats
+from assistant.core.services.telemetry import TelemetryService, TelemetrySnapshot
+from assistant.interfaces.telegram.handlers.callbacks import handle_status_action
+from assistant.interfaces.telegram.handlers.commands import cmd_status
+from assistant.interfaces.telegram.keyboards import get_status_keyboard
 
 
 def test_format_uptime() -> None:
@@ -86,7 +86,7 @@ async def test_telemetry_snapshot_formatting() -> None:
     )
 
     report = snapshot.format_telegram_report()
-    assert "📊 **Диагностика и статус SummaryBot**" in report
+    assert "📊 **Диагностика и статус Assistant**" in report
     assert "(`staging`)" in report
     assert "`1ч 1м 5с`" in report
     assert "`145.2 МБ`" in report
@@ -114,7 +114,7 @@ async def test_cmd_status_handler() -> None:
     await cmd_status(mock_message)
     mock_message.answer.assert_called_once()
     args, kwargs = mock_message.answer.call_args
-    assert "📊 **Диагностика и статус SummaryBot**" in args[0]
+    assert "📊 **Диагностика и статус Assistant**" in args[0]
     assert kwargs.get("parse_mode") == "Markdown"
     assert kwargs.get("reply_markup") is not None
 
@@ -151,4 +151,4 @@ async def test_status_callbacks() -> None:
     await handle_status_action(cb_settings)
     mock_msg.edit_text.assert_called_once()
     args, _ = mock_msg.edit_text.call_args
-    assert "Настройки бота SummaryBot" in args[0]
+    assert "Настройки бота Assistant" in args[0]

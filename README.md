@@ -1,30 +1,35 @@
-# Standard Project Baseline Template
+# Assistant
 
-This repository represents the canonical baseline structure for all projects.
+Universal multimodal Telegram bot and CLI for summarization, speech-to-text (STT) transcription, and analysis across all media types.
 
-## Project Structure
-- `.githooks/` - Versioned Git hooks for invisible OpenTimestamps background anchoring and security validations.
-- `.github/workflows/ots-cron.yml` - Daily automated proof upgrading & verification via GitHub Actions.
-- `.allowed_signers` - Trusted public keys for commit and tag cryptographic verification.
-- `SECURITY.md` - Security policy and trust anchoring.
-- `CHANGELOG.md` - Structured release notes adhering to Keep a Changelog and Semantic Versioning.
-- `docs/` - Living documentation (Architecture, ADR, Plans, Ideas, User Guides in `ru/` and `en/`).
-- `scripts/`
-  - `retrofit.sh` - Helper script to upgrade existing repositories to this baseline.
-  - `release.sh` - Milestone release creation tool (changelog bump, signed tag, OpenTimestamps sync).
-  - `release-check.sh` - Universal release gate verifier (clean tree, main branch, SemVer tag, changelog entry).
+## Features
 
-## Quickstart for New Projects
-1. Copy or clone this template:
-   ```bash
-   cp -r /Projects/Template /Projects/<ProjectName>
-   cd /Projects/<ProjectName>
-   git init
-   git config core.hooksPath .githooks
-   ```
-2. Create and test features in short-lived branches (`feat/<topic>`).
-3. Merge into `main` after staging validation.
-4. Cut a milestone release:
-   ```bash
-   scripts/release.sh v1.0.0
-   ```
+- **Any media in**: voice, music, podcasts, video and circular video notes, documents (PDF/DOCX/TXT/Markdown), images and screenshots (OCR), web links, text, and geolocation.
+- **Resilient model routing**: every task category defines a Primary → Fallback model pair with automatic failover on `429`, `5xx`, or timeouts.
+- **Pro mode** (`/pro`) for deep, structured analysis.
+- Interactive inline mode, multi-URL batch processing, document export, persistent response cache, per-user preferences, and a personal bookmarks/knowledge archive.
+
+## CLI
+
+```bash
+uv run assistant models                          # view the model matrix
+uv run assistant process document.pdf            # summarise a local file
+uv run assistant process "https://example.com" --pro -o summary.md
+uv run assistant tg-serve                        # run the Telegram bot
+```
+
+## Documentation
+
+- User & operator guide: [`docs/en/`](docs/en/) and [`docs/ru/`](docs/ru/).
+- Architecture, ADRs and plans: [`docs/`](docs/).
+
+## CI/CD & Deployment
+
+GitHub Actions builds and publishes the container image to GHCR
+(`ghcr.io/danyanadamu/assistant`). Feature/fix branches deploy to the **Actions**
+test sandbox; signed `v*` tags deploy to **Ice** (production).
+
+## Security
+
+See [`SECURITY.md`](SECURITY.md). Secrets live in Ansible Vault (`Infra`) and are
+injected at runtime via `.env`; nothing secret is committed to this repository.

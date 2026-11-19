@@ -1,6 +1,6 @@
-# SummaryBot — User & Operator Guide
+# Assistant — User & Operator Guide
 
-**SummaryBot** is a universal multimodal Telegram bot and CLI suite for summarization, speech-to-text (STT) transcription, and analysis across all media types.
+**Assistant** is a universal multimodal Telegram bot and CLI suite for summarization, speech-to-text (STT) transcription, and analysis across all media types.
 
 ---
 
@@ -27,37 +27,39 @@ The command-line interface allows local testing and batch processing:
 
 ```bash
 # View active model matrix
-uv run summary-bot models
+uv run assistant models
 
 # Process any local media file
-uv run summary-bot process document.pdf
+uv run assistant process document.pdf
 
 # Process web link in Pro mode and save markdown output
-uv run summary-bot process "https://example.com/article" --pro -o summary.md
+uv run assistant process "https://example.com/article" --pro -o summary.md
 
 # Launch Telegram bot long-polling daemon
-uv run summary-bot tg-serve
+uv run assistant tg-serve
 ```
 
 ---
 
-## 🚀 Server Deployment (Test / Staging)
+## 🚀 Server Deployment
 
-SummaryBot is deployed as a rootless Podman container managed by systemd Quadlet:
+Assistant is deployed as a rootless Podman container managed by systemd Quadlet.
+GitHub Actions builds the image to GHCR and rolls it out over SSH through a
+digest-pinned forced-command wrapper.
 
-1. **Service User**: `apps` on host `berg-test` (port 4021).
-2. **Proxy Gateway**: Dedicated `apps-proxy-gateway` container (AmneziaWG) providing isolated European network routing.
-3. **Stack Location**:
-   * `/home/apps/stacks/SummaryBot/Containerfile`
-   * `/home/apps/stacks/SummaryBot/SummaryBot.container`
-   * `/home/apps/stacks/SummaryBot/.env` (mode `0600`)
+* **Test sandbox**: user `apps` on **Actions** (LXC container on Ice).
+* **Production**: user `apps` on **Ice**.
+* **Stack layout** (Infra-provisioned):
+  * quadlet `/etc/containers/systemd/users/<uid>/assistant.container`
+  * env `~/stacks/Assistant/.env` (mode `0600`)
+  * data `~/stacks/Assistant/data`
 
 ### Service Management
 ```bash
 systemctl --user daemon-reload
-systemctl --user start SummaryBot
-systemctl --user status SummaryBot
-journalctl --user -u SummaryBot -f
+systemctl --user start Assistant
+systemctl --user status Assistant
+journalctl --user -u Assistant -f
 ```
 
 ---

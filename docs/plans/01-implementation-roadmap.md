@@ -12,11 +12,11 @@ Trajectory: Core-First Multimodal Ingestion Pipeline
 ## Phase 1: Foundation & Project Skeleton
 - [x] Initialize Python 3.12+ project with Astral `uv` (`pyproject.toml`, `uv.lock`)
 - [x] Configure strict typing tools: `ruff.toml`, `mypy.ini` (strict mode)
-- [x] Create `.env.example` and Pydantic configuration module (`src/summary_bot/config.py`)
+- [x] Create `.env.example` and Pydantic configuration module (`src/assistant/config.py`)
 - [x] Establish package directory structure:
-  - `src/summary_bot/core/` (models, ports, services)
-  - `src/summary_bot/adapters/` (openrouter, extractors)
-  - `src/summary_bot/interfaces/` (cli, telegram)
+  - `src/assistant/core/` (models, ports, services)
+  - `src/assistant/adapters/` (openrouter, extractors)
+  - `src/assistant/interfaces/` (cli, telegram)
   - `tests/` (unit, integration, mocks)
 
 ## Phase 2: Domain Core & Failover Orchestrator
@@ -43,7 +43,7 @@ Trajectory: Core-First Multimodal Ingestion Pipeline
 - [x] Implement `WebLinkExtractor` adapter (`trafilatura` for clean article content)
 
 ## Phase 4: CLI / TUI Application & Test Suite
-- [x] Build Typer CLI (`summary-bot process <file|url|text>`) with Rich output formatting
+- [x] Build Typer CLI (`assistant process <file|url|text>`) with Rich output formatting
 - [x] Add flags: `--pro`, `--category`, `--json`, `--output`
 - [x] Implement comprehensive test suite:
   - Mocked OpenRouter responses (success, 429 failover to fallback, 500 error handling)
@@ -64,13 +64,13 @@ Trajectory: Core-First Multimodal Ingestion Pipeline
 
 ## Phase 6: Documentation, Containerization & Packaging
 - [x] Write `Containerfile` (Debian Bookworm Slim + ffmpeg + uv + non-root user `apps`)
-- [x] Write `SummaryBot.container` Quadlet unit file for systemd
+- [x] Write `Assistant.container` Quadlet unit file for systemd
 - [x] Add user-facing bilingual documentation (`docs/en/` and `docs/ru/`)
 
 ## Phase 7: Deployment to Staging (`berg-test`)
 - [x] Prepare testbed staging configuration on `berg-test` under user `apps`:
   - [x] Set up dedicated `apps-proxy-gateway` (AmneziaWG via Frankfurt node)
-  - [x] Deploy `SummaryBot` Quadlet unit in user session
+  - [x] Deploy `Assistant` Quadlet unit in user session
 - [x] Run end-to-end smoke test on staging (Telegram polling, OpenRouter connectivity verified)
 
 ---

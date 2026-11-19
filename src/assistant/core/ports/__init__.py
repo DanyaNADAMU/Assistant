@@ -1,0 +1,6 @@
+"""Core port protocols exports."""
+
+from assistant.core.ports.extractor import MediaExtractorPort
+from assistant.core.ports.model_gateway import ModelGatewayPort
+
+__all__ = ["MediaExtractorPort", "ModelGatewayPort"]
