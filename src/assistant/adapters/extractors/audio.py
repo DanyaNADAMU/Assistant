@@ -115,7 +115,9 @@ class AudioExtractor(MediaExtractorPort):
 
         use_fallback = False
         if proc.returncode != 0:
-            logger.debug("Optimized ffmpeg returned %d, falling back to basic transcode", proc.returncode)
+            logger.debug(
+                "Optimized ffmpeg returned %d, falling back to basic transcode", proc.returncode
+            )
             use_fallback = True
         elif not out_path.exists() or out_path.stat().st_size < 512:
             # File is completely silent (silenceremove stripped everything)

@@ -343,9 +343,7 @@ class SqliteResponseCacheRepository(ResponseCachePort):
             results: list[CachedSummaryItem] = []
             for row in rows:
                 try:
-                    takeaways = (
-                        json.loads(row["key_takeaways"]) if row["key_takeaways"] else []
-                    )
+                    takeaways = json.loads(row["key_takeaways"]) if row["key_takeaways"] else []
                     if not isinstance(takeaways, list):
                         takeaways = [str(takeaways)]
                 except Exception:

@@ -181,7 +181,9 @@ async def cmd_batch(
         return
 
     is_pro = "/pro" in text.lower() or "--pro" in text.lower()
-    force_refresh = "/refresh" in text.lower() or "--refresh" in text.lower() or "/force" in text.lower()
+    force_refresh = (
+        "/refresh" in text.lower() or "--refresh" in text.lower() or "/force" in text.lower()
+    )
 
     # User instruction is whatever text remains after removing /batch, /pro, /refresh and URLs
     instruction_text = text

@@ -136,7 +136,9 @@ async def test_inline_query_empty_returns_recent_and_guide(
     assert len(results) >= 2
     # First is recent summary, last is usage guide
     assert any(isinstance(r, InlineQueryResultArticle) and "Недавнее" in r.title for r in results)
-    assert any(isinstance(r, InlineQueryResultArticle) and "Как работает" in r.title for r in results)
+    assert any(
+        isinstance(r, InlineQueryResultArticle) and "Как работает" in r.title for r in results
+    )
 
 
 @pytest.mark.asyncio
