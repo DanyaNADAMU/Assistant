@@ -1,12 +1,13 @@
 """Telegram callback query handlers for interactive actions."""
 
 import logging
+from typing import cast
 
 from aiogram import Bot, F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import BufferedInputFile, CallbackQuery, Message
 
-from summary_bot.adapters.storage import preferences_repo
+from summary_bot.adapters.storage import bookmarks_repo, preferences_repo
 from summary_bot.core.services.context_store import context_store
 from summary_bot.core.services.exporter import document_exporter
 from summary_bot.core.services.runner import ResilientModelRunner
@@ -25,10 +26,11 @@ router = Router(name="callbacks")
 @router.callback_query(F.data.startswith("act:"))
 async def handle_summary_action(callback: CallbackQuery, runner: ResilientModelRunner) -> None:
     """Handle interactive post-summary action buttons."""
-    if not callback.data or not callback.message or not isinstance(callback.message, Message):
+    if not callback.data or not callback.message:
         await callback.answer()
         return
 
+    message = cast("Message", callback.message)
     parts = callback.data.split(":")
     if len(parts) != 3:
         await callback.answer("Некорректная команда", show_alert=True)
@@ -44,19 +46,24 @@ async def handle_summary_action(callback: CallbackQuery, runner: ResilientModelR
         return
 
     has_stt = bool(context.transcription)
+    try:
+        user_id = int(callback.from_user.id if callback.from_user else callback.message.chat.id)
+    except (TypeError, ValueError):
+        user_id = 0
+    is_bm = await bookmarks_repo.is_bookmarked(user_id, cid)
 
     try:
         if action == "export":
-            await callback.message.edit_reply_markup(reply_markup=get_export_keyboard(cid))
+            await message.edit_reply_markup(reply_markup=get_export_keyboard(cid))
             await callback.answer()
             return
 
         if action == "orig":
-            await callback.message.edit_text(
+            await message.edit_text(
                 context.original_text,
                 parse_mode="Markdown",
                 reply_markup=get_summary_keyboard(
-                    cid, active_view="orig", has_transcription=has_stt
+                    cid, active_view="orig", has_transcription=has_stt, is_bookmarked=is_bm
                 ),
             )
             await callback.answer()
@@ -75,21 +82,23 @@ async def handle_summary_action(callback: CallbackQuery, runner: ResilientModelR
             if len(formatted_stt) > 4000:
                 formatted_stt = formatted_stt[:3950] + "\n\n...[обрезано по лимиту Telegram]"
 
-            await callback.message.edit_text(
+            await message.edit_text(
                 formatted_stt,
                 parse_mode="Markdown",
-                reply_markup=get_summary_keyboard(cid, active_view="stt", has_transcription=True),
+                reply_markup=get_summary_keyboard(
+                    cid, active_view="stt", has_transcription=True, is_bookmarked=is_bm
+                ),
             )
             await callback.answer()
             return
 
         # Handle refinement actions (tldr, actions, deep, trans)
         if action in context.views:
-            await callback.message.edit_text(
+            await message.edit_text(
                 context.views[action],
                 parse_mode="Markdown",
                 reply_markup=get_summary_keyboard(
-                    cid, active_view=action, has_transcription=has_stt
+                    cid, active_view=action, has_transcription=has_stt, is_bookmarked=is_bm
                 ),
             )
             await callback.answer()
@@ -122,10 +131,12 @@ async def handle_summary_action(callback: CallbackQuery, runner: ResilientModelR
 
         context.views[action] = formatted_view
 
-        await callback.message.edit_text(
+        await message.edit_text(
             formatted_view,
             parse_mode="Markdown",
-            reply_markup=get_summary_keyboard(cid, active_view=action, has_transcription=has_stt),
+            reply_markup=get_summary_keyboard(
+                cid, active_view=action, has_transcription=has_stt, is_bookmarked=is_bm
+            ),
         )
     except TelegramBadRequest as exc:
         if "message is not modified" in str(exc).lower():

@@ -16,6 +16,7 @@ from summary_bot.adapters.storage import response_cache
 from summary_bot.config import Settings, settings
 from summary_bot.core.services.batch import BatchSummarizer
 from summary_bot.core.services.runner import ResilientModelRunner
+from summary_bot.interfaces.telegram.handlers.bookmarks import router as bookmarks_router
 from summary_bot.interfaces.telegram.handlers.callbacks import router as callbacks_router
 from summary_bot.interfaces.telegram.handlers.commands import router as commands_router
 from summary_bot.interfaces.telegram.handlers.inline import router as inline_router
@@ -44,6 +45,7 @@ def create_dispatcher(
 
     # Register routers (commands must be first to intercept /start, /help, /models)
     dp.include_router(commands_router)
+    dp.include_router(bookmarks_router)
     dp.include_router(callbacks_router)
     dp.include_router(inline_router)
     dp.include_router(media_router)

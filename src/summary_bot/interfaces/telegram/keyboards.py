@@ -10,6 +10,7 @@ def get_summary_keyboard(
     cid: str,
     active_view: str = "orig",
     has_transcription: bool = False,
+    is_bookmarked: bool = False,
 ) -> InlineKeyboardMarkup:
     """Build dynamic inline keyboard for summary refinement actions."""
     builder = InlineKeyboardBuilder()
@@ -46,9 +47,11 @@ def get_summary_keyboard(
             InlineKeyboardButton(text="🎙️ Полный транскрипт", callback_data=f"act:{cid}:stt")
         )
 
-    # Always provide export option
+    # Bookmark toggle and export buttons on bottom row
+    bm_text = "⭐ В закладках" if is_bookmarked else "☆ В закладки"
     builder.row(
-        InlineKeyboardButton(text="📥 Экспорт документа", callback_data=f"act:{cid}:export")
+        InlineKeyboardButton(text=bm_text, callback_data=f"bm:toggle:{cid}"),
+        InlineKeyboardButton(text="📥 Экспорт", callback_data=f"act:{cid}:export"),
     )
 
     return builder.as_markup()
@@ -113,5 +116,61 @@ def get_status_keyboard() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(text="🔄 Обновить статус", callback_data="status:refresh"),
         InlineKeyboardButton(text="⚙️ Настройки", callback_data="status:settings"),
+    )
+    return builder.as_markup()
+
+
+def get_bookmarks_page_keyboard(
+    bookmark_ids: list[int],
+    page: int,
+    total_pages: int,
+    query: str | None = None,
+) -> InlineKeyboardMarkup:
+    """Build paginated keyboard for bookmarks archive."""
+    builder = InlineKeyboardBuilder()
+
+    # Row of item selectors: 📖 #1, 📖 #2, etc.
+    item_buttons = [
+        InlineKeyboardButton(
+            text=f"📖 #{idx + 1}",
+            callback_data=f"bm:open:{b_id}:{page}",
+        )
+        for idx, b_id in enumerate(bookmark_ids)
+    ]
+    if item_buttons:
+        builder.row(*item_buttons)
+
+    # Navigation row
+    nav_buttons: list[InlineKeyboardButton] = []
+    q_suffix = f":{query}" if query else ""
+
+    if page > 1:
+        nav_buttons.append(
+            InlineKeyboardButton(text="◀️ Назад", callback_data=f"bm:page:{page - 1}{q_suffix}")
+        )
+    nav_buttons.append(
+        InlineKeyboardButton(text=f"Стр. {page}/{total_pages}", callback_data="noop")
+    )
+    if page < total_pages:
+        nav_buttons.append(
+            InlineKeyboardButton(text="Вперёд ▶️", callback_data=f"bm:page:{page + 1}{q_suffix}")
+        )
+    builder.row(*nav_buttons)
+
+    # Action row: Export all and Close
+    builder.row(
+        InlineKeyboardButton(text="📥 Экспорт всех (.md)", callback_data="bm:export"),
+        InlineKeyboardButton(text="❌ Закрыть", callback_data="bm:close"),
+    )
+
+    return builder.as_markup()
+
+
+def get_bookmark_detail_keyboard(bookmark_id: int, page: int) -> InlineKeyboardMarkup:
+    """Build detail view keyboard with delete and back actions."""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="🗑️ Удалить", callback_data=f"bm:del:{bookmark_id}:{page}"),
+        InlineKeyboardButton(text="↩️ К списку", callback_data=f"bm:page:{page}"),
     )
     return builder.as_markup()

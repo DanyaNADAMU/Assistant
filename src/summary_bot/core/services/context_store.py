@@ -23,6 +23,8 @@ class SummaryContext:
     views: dict[str, str] = field(default_factory=dict)
     created_at: float = field(default_factory=time.time)
     user_id: int | None = None
+    title: str = "Саммари материала"
+    source_url: str | None = None
 
     @classmethod
     def create(
@@ -35,6 +37,8 @@ class SummaryContext:
         category: TaskCategory = TaskCategory.TEXT_DOCS,
         model_used: str = "",
         user_id: int | None = None,
+        title: str = "Саммари материала",
+        source_url: str | None = None,
     ) -> "SummaryContext":
         """Factory creating a new context with a unique 8-character ID."""
         cid = uuid.uuid4().hex[:8]
@@ -48,6 +52,8 @@ class SummaryContext:
             category=category,
             model_used=model_used,
             user_id=user_id,
+            title=title,
+            source_url=source_url,
         )
 
 

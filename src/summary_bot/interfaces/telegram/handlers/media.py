@@ -52,6 +52,14 @@ async def _execute_and_reply(
         if result.key_takeaways:
             source_content += "\n\n" + "\n".join(result.key_takeaways)
 
+        source_url = payload.url if payload.kind == PayloadKind.URL else None
+        item_title = (
+            payload.filename
+            or payload.url
+            or (payload.text[:57] + "..." if payload.text and len(payload.text) > 60 else payload.text)
+            or "Саммари материала"
+        )
+
         ctx = SummaryContext.create(
             original_text=formatted_text,
             source_content=source_content,
@@ -61,12 +69,15 @@ async def _execute_and_reply(
             category=result.category,
             model_used=result.model_used,
             user_id=user_id,
+            title=item_title,
+            source_url=source_url,
         )
         await context_store.put(ctx)
         reply_markup = get_summary_keyboard(
             cid=ctx.cid,
             active_view="orig",
             has_transcription=bool(result.transcription),
+            is_bookmarked=False,
         )
 
         # Split message if it exceeds Telegram's 4096 character limit
@@ -132,12 +143,15 @@ async def _execute_batch_and_reply(
             category=TaskCategory.TEXT_DOCS,
             model_used=batch_result.synthesis_model,
             user_id=user_id,
+            title=f"Пакетный обзор ({len(batch_result.items)} источников)",
+            source_url=None,
         )
         await context_store.put(ctx)
         reply_markup = get_summary_keyboard(
             cid=ctx.cid,
             active_view="orig",
             has_transcription=False,
+            is_bookmarked=False,
         )
 
         if len(formatted_text) <= MAX_TELEGRAM_MESSAGE_LENGTH:

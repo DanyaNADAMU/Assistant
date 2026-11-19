@@ -3,7 +3,6 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from aiogram.types import Message
 
 from summary_bot.config import Settings, TaskCategory
 from summary_bot.core.models.payload import InputPayload
@@ -134,9 +133,11 @@ async def test_callback_handler_workflow() -> None:
     runner = ResilientModelRunner(gateway=gateway, settings=settings)
 
     # 1. Test action 'actions'
-    mock_msg = AsyncMock(spec=Message)
+    mock_msg = AsyncMock()
+    mock_msg.chat.id = 123
     mock_cb = MagicMock()
     mock_cb.data = f"act:{ctx.cid}:actions"
+    mock_cb.from_user.id = 123
     mock_cb.message = mock_msg
     mock_cb.answer = AsyncMock()
 

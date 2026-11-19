@@ -1,6 +1,7 @@
 """CLI interface for SummaryBot using Typer and Rich."""
 
 import asyncio
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -15,7 +16,7 @@ from summary_bot.adapters.extractors.document import DocumentExtractor
 from summary_bot.adapters.extractors.vision import VisionExtractor
 from summary_bot.adapters.extractors.web import WebExtractor
 from summary_bot.adapters.openrouter.client import OpenRouterClient
-from summary_bot.adapters.storage import response_cache
+from summary_bot.adapters.storage import bookmarks_repo, response_cache
 from summary_bot.config import TaskCategory, settings
 from summary_bot.core.models.payload import InputPayload, PayloadKind
 from summary_bot.core.services.batch import BatchSummarizer
@@ -225,6 +226,77 @@ def cache_stats() -> None:
         console.print(table)
 
     asyncio.run(_async_stats())
+
+
+@app.command("bookmarks")
+def bookmarks_cli(
+    user_id: Annotated[
+        int, typer.Option("--user-id", "-u", help="User ID (defaults to 0 for CLI)")
+    ] = 0,
+    query: Annotated[str | None, typer.Option("--query", "-q", help="Search query")] = None,
+    export_path: Annotated[
+        Path | None, typer.Option("--export", "-o", help="Export all bookmarks to Markdown file")
+    ] = None,
+) -> None:
+    """List or export saved bookmarks in knowledge archive."""
+
+    async def _async_bm() -> None:
+        if export_path:
+            items = await bookmarks_repo.get_all_bookmarks(user_id)
+            if not items:
+                console.print("[yellow]Нет сохранённых закладок для экспорта.[/yellow]")
+                return
+            now_str = datetime.now(UTC).strftime("%d.%m.%Y %H:%M UTC")
+            lines = [
+                "# Моя библиотека закладок — SummaryBot",
+                f"*Экспортировано: {now_str}*",
+                f"*Всего закладок: {len(items)}*",
+                "",
+                "---",
+                "",
+            ]
+            for idx, item in enumerate(items, start=1):
+                lines.append(f"## {idx}. {item.title}")
+                if item.source_url:
+                    lines.append(f"- **Источник:** [{item.source_url}]({item.source_url})")
+                lines.append(f"- **Дата:** {item.created_at.strftime('%d.%m.%Y %H:%M UTC')}")
+                lines.append("")
+                lines.append("### Краткое содержание:")
+                lines.append(item.summary_text)
+                lines.append("")
+                if item.takeaways:
+                    lines.append("### Главные мысли:")
+                    for t in item.takeaways:
+                        lines.append(f"- {t}")
+                    lines.append("")
+                lines.append("---")
+                lines.append("")
+            export_path.write_text("\n".join(lines), encoding="utf-8")
+            console.print(f"[green]✅ Экспортировано {len(items)} закладок в {export_path}[/green]")
+            return
+
+        items, total = await bookmarks_repo.list_bookmarks(
+            user_id=user_id, page=1, page_size=20, query=query
+        )
+        if not items:
+            console.print("[yellow]Библиотека закладок пуста.[/yellow]")
+            return
+
+        table = Table(title=f"📚 Закладки SummaryBot (Всего: {total})", border_style="cyan")
+        table.add_column("#", style="dim", width=4)
+        table.add_column("Заголовок", style="bold white")
+        table.add_column("Источник", style="blue")
+        table.add_column("Дата", style="magenta")
+        for idx, item in enumerate(items, start=1):
+            table.add_row(
+                str(idx),
+                item.title,
+                item.source_url or "-",
+                item.created_at.strftime("%d.%m.%Y"),
+            )
+        console.print(table)
+
+    asyncio.run(_async_bm())
 
 
 @app.command()

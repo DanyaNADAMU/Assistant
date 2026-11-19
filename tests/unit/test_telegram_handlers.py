@@ -37,4 +37,4 @@ def test_create_dispatcher_routes() -> None:
     dp = create_dispatcher(runner)
 
     assert dp["runner"] == runner
-    assert len(dp.sub_routers) == 4  # commands_router, callbacks_router, inline_router, and media_router
+    assert len(dp.sub_routers) == 5  # commands, bookmarks, callbacks, inline, and media routers
