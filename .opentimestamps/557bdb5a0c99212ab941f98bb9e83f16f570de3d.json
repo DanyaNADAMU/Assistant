@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "source_commit": "557bdb5a0c99212ab941f98bb9e83f16f570de3d",
+  "git_object_format": "sha1",
+  "payload_format": "git-commit-id-v1",
+  "submitted_at": "2026-11-19T20:05:03Z",
+  "proof": "557bdb5a0c99212ab941f98bb9e83f16f570de3d.ots",
+  "source_ref": "refs/heads/feat/rebrand-to-assistant",
+  "triggers": [
+    "max_age"
+  ]
+}
