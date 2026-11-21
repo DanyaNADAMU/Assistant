@@ -1,9 +1,9 @@
 name: Build & Test Deploy
 
 # Trunk pipeline: every push to main or a feature branch runs the test
-# suite, builds the container image, and, on feature branches only, rolls
-# it out to the test sandbox (Actions). Production releases run from
-# release.yml on signed tags.
+# suite, builds the container image through the shared catalog, and, on
+# feature branches only, rolls it out to the test sandbox (Actions).
+# Production releases run from release.yml on signed tags.
 on:
   push:
     branches:
@@ -15,70 +15,37 @@ on:
       - main
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
+concurrency:
+  # Same-branch pushes supersede each other: the newest ref wins and
+  # stale test-suite runs are cancelled before they finish.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-
-      - name: Sync dependencies
-        run: uv sync --frozen --all-extras
-
-      - name: Lint (ruff)
-        run: uv run ruff check .
-
-      - name: Format check (ruff)
-        run: uv run ruff format --check .
-
-      - name: Type check (mypy strict)
-        run: uv run mypy src/assistant
-
-      - name: Unit tests (pytest)
-        run: uv run pytest -q
+      - name: Test suite (ruff, mypy strict, pytest)
+        uses: ./.github/actions/test
 
   build:
     needs: test
-    runs-on: ubuntu-latest
+    # Single canonical build path from the shared catalog: lowercase GHCR
+    # name, layer cache, provenance + SBOM, Trivy severity gate.
     permissions:
       contents: read
       packages: write
-    outputs:
-      image_ref: ${{ steps.image.outputs.image_ref }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Normalize image name to lowercase
-        # GHCR rejects uppercase path segments; github.repository keeps
-        # the original mixed-case owner/name spelling.
-        run: echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Containerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
-      - name: Record pushed image ref
-        id: image
-        run: echo "image_ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+    uses: Danyanadamu/Workflows/.github/workflows/container-build.yml@feat/container-build-precheck
+    with:
+      context: .
+      file: ./Containerfile
+      image_tag: ${{ github.sha }}
+      # PR builds are verification-only: no push, so a draft PR can
+      # never move the tags the staging testbed pins.
+      push: ${{ github.event_name != 'pull_request' }}
 
   test-deploy:
     needs: build
