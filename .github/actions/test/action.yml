@@ -1,0 +1,35 @@
+name: 'Assistant test suite'
+description: >
+  Lint (ruff), format check (ruff), strict type check (mypy), and unit
+  tests (pytest) via uv with dependency freezing and a uv cache. Shared
+  by build.yml (every push) and release.yml (tagged releases), so a
+  production image can never be built from untested code.
+runs:
+  using: composite
+  steps:
+    - name: Install uv
+      uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+      with:
+        # Cache uv's dependency + wheel store keyed on uv.lock; test jobs
+        # run on every push, so the sync cost must be paid once, not per run.
+        enable-cache: true
+
+    - name: Sync dependencies
+      run: uv sync --frozen --all-extras
+      shell: bash
+
+    - name: Lint (ruff)
+      run: uv run ruff check .
+      shell: bash
+
+    - name: Format check (ruff)
+      run: uv run ruff format --check .
+      shell: bash
+
+    - name: Type check (mypy strict)
+      run: uv run mypy src/assistant
+      shell: bash
+
+    - name: Unit tests (pytest)
+      run: uv run pytest -q
+      shell: bash
