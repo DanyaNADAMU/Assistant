@@ -38,7 +38,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: Danyanadamu/Workflows/.github/workflows/container-build.yml@feat/container-build-precheck
+    uses: Danyanadamu/Workflows/.github/workflows/container-build.yml@v1
     with:
       context: .
       file: ./Containerfile
