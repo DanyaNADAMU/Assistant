@@ -10,18 +10,50 @@ on:
       - main
       - 'feat/**'
       - 'fix/**'
+    # Documentation-only pushes skip the pipeline: no image content can
+    # change, so the build and the staging roll they would trigger are
+    # pure runner cost.
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
   workflow_dispatch:
 
 concurrency:
-  # Same-branch pushes supersede each other: the newest ref wins and
-  # stale test-suite runs are cancelled before they finish.
+  # Same-branch pushes queue, the newest pending run supersedes older
+  # ones, but a running deploy is NEVER cancelled mid-roll: the wrapper
+  # owns capture/rollback atomically and a half-cut deploy is exactly
+  # what it exists to prevent.
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
+  gitleaks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout full history
+        # Push protection guards only the future; the git timeline is
+        # append-only, so anything leaked before the flips can only be
+        # discovered, never silently removed. Full history, every push.
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: Secret scan (gitleaks)
+        env:
+          GITLEAKS_VERSION: '8.30.1'
+        run: |
+          set -euo pipefail
+          curl -sfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz gitleaks
+          ./gitleaks git --redact .
+
   test:
     runs-on: ubuntu-24.04
     steps:
@@ -32,13 +64,13 @@ jobs:
         uses: ./.github/actions/test
 
   build:
-    needs: test
+    needs: [test, gitleaks]
     # Single canonical build path from the shared catalog: lowercase GHCR
     # name, layer cache, provenance + SBOM, Trivy severity gate.
     permissions:
       contents: read
       packages: write
-    uses: Danyanadamu/Workflows/.github/workflows/container-build.yml@1f74214eb3ffb559bdd11d249072cdff8c40b5d4
+    uses: Danyanadamu/Workflows/.github/workflows/container-build.yml@v1
     with:
       context: .
       file: ./Containerfile
@@ -80,7 +112,7 @@ jobs:
     permissions:
       contents: read
       attestations: read
-    uses: Danyanadamu/Workflows/.github/workflows/deploy.yml@1f74214eb3ffb559bdd11d249072cdff8c40b5d4
+    uses: Danyanadamu/Workflows/.github/workflows/deploy.yml@v1
     with:
       host: ${{ vars.TEST_HOST }}
       port: ${{ vars.TEST_PORT }}

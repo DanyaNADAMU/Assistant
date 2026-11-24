@@ -23,6 +23,6 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: Danyanadamu/Workflows/.github/workflows/sast.yml@1f74214eb3ffb559bdd11d249072cdff8c40b5d4
+    uses: Danyanadamu/Workflows/.github/workflows/sast.yml@v1
     with:
       languages: '["python"]'
