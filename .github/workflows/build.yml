@@ -38,7 +38,12 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: Danyanadamu/Workflows/.github/workflows/container-build.yml@v1
+      # id-token + attestations: the catalog's provenance attestation step
+      # signs via the runner's OIDC identity; without these grants it
+      # fails closed, which is the correct default for a missing grant.
+      id-token: write
+      attestations: write
+    uses: Danyanadamu/Workflows/.github/workflows/container-build.yml@66ed97351f7ef8ab4e2b8dd0d3adda654b939021
     with:
       context: .
       file: ./Containerfile
@@ -52,7 +57,7 @@ jobs:
     # Feature/fix branches deploy to the test sandbox (Actions LXC) for
     # validation; main is released to production via tags in release.yml.
     if: github.event_name == 'push' && github.ref != 'refs/heads/main'
-    uses: Danyanadamu/Workflows/.github/workflows/deploy.yml@v1
+    uses: Danyanadamu/Workflows/.github/workflows/deploy.yml@66ed97351f7ef8ab4e2b8dd0d3adda654b939021
     with:
       host: ${{ vars.TEST_HOST }}
       port: ${{ vars.TEST_PORT }}
