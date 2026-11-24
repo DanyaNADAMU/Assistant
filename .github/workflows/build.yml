@@ -38,12 +38,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-      # id-token + attestations: the catalog's provenance attestation step
-      # signs via the runner's OIDC identity; without these grants it
-      # fails closed, which is the correct default for a missing grant.
-      id-token: write
-      attestations: write
-    uses: Danyanadamu/Workflows/.github/workflows/container-build.yml@9e5991157ba9abe9f8396fd91ff1c7c42e491c19
+    uses: Danyanadamu/Workflows/.github/workflows/container-build.yml@610aef6471d71530319af39c4c26035c4a748b05
     with:
       context: .
       file: ./Containerfile
@@ -52,8 +47,30 @@ jobs:
       # never move the tags the staging testbed pins.
       push: ${{ github.event_name != 'pull_request' }}
 
-  test-deploy:
+  attest:
     needs: build
+    # PR verification builds push nothing, so there is no subject to sign.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # The signing right lives here, on the caller's own job: id-token
+    # grants never cross a `uses:` boundary, so the catalog cannot sign
+    # for us. The signed provenance lands in this repository's
+    # attestation store, which deploy.yml verifies before any host is
+    # touched.
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Sign build provenance (Sigstore, runner OIDC)
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/danyanadamu/assistant
+          subject-digest: ${{ needs.build.outputs.image_digest }}
+
+  test-deploy:
+    needs: [build, attest]
     # Feature/fix branches deploy to the test sandbox (Actions LXC) for
     # validation; main is released to production via tags in release.yml.
     if: github.event_name == 'push' && github.ref != 'refs/heads/main'
@@ -63,7 +80,7 @@ jobs:
     permissions:
       contents: read
       attestations: read
-    uses: Danyanadamu/Workflows/.github/workflows/deploy.yml@9e5991157ba9abe9f8396fd91ff1c7c42e491c19
+    uses: Danyanadamu/Workflows/.github/workflows/deploy.yml@610aef6471d71530319af39c4c26035c4a748b05
     with:
       host: ${{ vars.TEST_HOST }}
       port: ${{ vars.TEST_PORT }}
