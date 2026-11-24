@@ -38,7 +38,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: Danyanadamu/Workflows/.github/workflows/container-build.yml@f5681e94c8e626336ca77a1fec858880a1957560
+    uses: Danyanadamu/Workflows/.github/workflows/container-build.yml@1f74214eb3ffb559bdd11d249072cdff8c40b5d4
     with:
       context: .
       file: ./Containerfile
@@ -80,7 +80,7 @@ jobs:
     permissions:
       contents: read
       attestations: read
-    uses: Danyanadamu/Workflows/.github/workflows/deploy.yml@f5681e94c8e626336ca77a1fec858880a1957560
+    uses: Danyanadamu/Workflows/.github/workflows/deploy.yml@1f74214eb3ffb559bdd11d249072cdff8c40b5d4
     with:
       host: ${{ vars.TEST_HOST }}
       port: ${{ vars.TEST_PORT }}

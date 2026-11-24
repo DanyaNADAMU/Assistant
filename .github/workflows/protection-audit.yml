@@ -15,6 +15,6 @@ permissions:
 
 jobs:
   audit:
-    uses: Danyanadamu/Workflows/.github/workflows/protection-audit.yml@f5681e94c8e626336ca77a1fec858880a1957560
+    uses: Danyanadamu/Workflows/.github/workflows/protection-audit.yml@1f74214eb3ffb559bdd11d249072cdff8c40b5d4
     secrets:
       protection_token: ${{ secrets.PROTECTION_AUDIT_TOKEN }}
