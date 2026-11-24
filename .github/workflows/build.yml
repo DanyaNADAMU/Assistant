@@ -43,7 +43,7 @@ jobs:
       # fails closed, which is the correct default for a missing grant.
       id-token: write
       attestations: write
-    uses: Danyanadamu/Workflows/.github/workflows/container-build.yml@0723e1697f667f958c74dc785cbd4da3eb64b5b9
+    uses: Danyanadamu/Workflows/.github/workflows/container-build.yml@4660085ee7136d5bc2da2522a17a4508561fe871
     with:
       context: .
       file: ./Containerfile
@@ -57,7 +57,7 @@ jobs:
     # Feature/fix branches deploy to the test sandbox (Actions LXC) for
     # validation; main is released to production via tags in release.yml.
     if: github.event_name == 'push' && github.ref != 'refs/heads/main'
-    uses: Danyanadamu/Workflows/.github/workflows/deploy.yml@0723e1697f667f958c74dc785cbd4da3eb64b5b9
+    uses: Danyanadamu/Workflows/.github/workflows/deploy.yml@4660085ee7136d5bc2da2522a17a4508561fe871
     with:
       host: ${{ vars.TEST_HOST }}
       port: ${{ vars.TEST_PORT }}
