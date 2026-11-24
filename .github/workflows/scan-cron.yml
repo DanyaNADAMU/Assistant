@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   rescan:
-    uses: Danyanadamu/Workflows/.github/workflows/scan-cron.yml@610aef6471d71530319af39c4c26035c4a748b05
+    uses: Danyanadamu/Workflows/.github/workflows/scan-cron.yml@f5681e94c8e626336ca77a1fec858880a1957560
     with:
       # The staging sandbox tracks per-branch sha tags that churn too fast
       # to be meaningful drift subjects; the production :latest pointer is
