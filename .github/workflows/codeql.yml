@@ -1,0 +1,28 @@
+name: CodeQL SAST
+
+# Caller stub: first-party CodeQL static analysis lives in the shared
+# catalog. Python is the only CodeQL-supported language in this
+# repository (the Telegram bot + CLI surface); it runs on every push to
+# main, every PR, and weekly on the schedule in case new CVE-class
+# queries arrive after the last push.
+on:
+  push:
+    branches:
+      - main
+      - 'feat/**'
+      - 'fix/**'
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '15 5 * * 1'
+  workflow_dispatch:
+
+jobs:
+  sast:
+    permissions:
+      contents: read
+      security-events: write
+    uses: Danyanadamu/Workflows/.github/workflows/sast.yml@v1
+    with:
+      languages: '["python"]'

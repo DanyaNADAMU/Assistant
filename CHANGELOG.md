@@ -8,6 +8,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`uv audit` in the test suite**: native SCA over the exact `uv.lock`
+  the image installs (PyPA advisory database) — a known-vulnerable pin
+  fails the suite before any image is built from it.
+- **gitleaks full-history secret scan** on every push: push protection
+  guards only the future, and the append-only timeline means anything
+  leaked before it can only be discovered, never silently removed.
+  Allowlist tuned for lockfiles and OTS proofs (`.gitleaks.toml`).
+- **CodeQL SAST** via the shared catalog (`sast.yml`, python) on pushes,
+  PRs, and weekly — free on public repositories, first-party, taint-flow
+  beyond AST lint reach. Selection rationale recorded in
+  `docs/adr/0001-security-scanner-selection.md`.
+- **Deploy provenance verification**: the release build's digest is
+  Sigstore-signed (`actions/attest-build-provenance`, runner OIDC) and
+  `deploy.yml` verifies it before anything touches a host — a
+  substituted or unattested image fails closed.
+- **Scheduled re-scan of the deployed image** (`scan-cron.yml`): a CVE
+  published after a release becomes a red run and a patch-release
+  signal instead of sitting silently in production.
+- **Protection drift audit** (`protection-audit.yml` + committed
+  `.github/protection-expected.json`): the live main-branch protection
+  and release-tag ruleset are diffed against the committed contract on a
+  schedule; needs the read-only `PROTECTION_AUDIT_TOKEN`, warns until
+  provisioned.
+- **Self-hosted Renovate** (`renovate.json` + `renovate-cron.yml`):
+  dependency update PRs for action pins and curl-pinned scanner
+  binaries, validated by the same pipelines they feed; needs
+  `RENOVATE_TOKEN`, warns until provisioned.
+- **GitHub Releases on tags**: the CHANGELOG section of a tag is
+  published as a Release object right after the Ice rollout it
+  describes.
+
+### Changed
+- **Main is a protected linear branch on GitHub**: enforce-admins, no
+  force pushes, no deletions — the "never force-push to main" invariant
+  now has a technical holder, not just the rules. Merges are
+  rebase/squash from here on.
+- **Release tags are ruleset-protected** (`refs/tags/v*`: no deletion,
+  non-fast-forward only).
+- **Same-branch pushes no longer cancel running deploys**
+  (`cancel-in-progress: false`): the wrapper owns capture/rollback
+  atomically and a half-cut deploy is what it exists to prevent.
+- Documentation-only pushes (`docs/**`, `**.md`) no longer trigger the
+  image build and the staging roll.
+
+### Fixed
+- **Daily OpenTimestamps cron unblocked** (catalog `ots.yml` fix): a
+  lost calendar submission (the v1-era squash commit 977619d, pending
+  since Nov 22) red-locked the loop — the pending proof could never
+  reach `main`, so no later cron could upgrade it. Young pending proofs
+  now ride the push with a warning and get upgraded by later runs; only
+  a proof pending for a week or more is red, with a re-stamp signal.
+
+### Added
 - Reusable test suite composite action (`.github/actions/test`) shared by
   the build and release pipelines: ruff lint/format, mypy strict, pytest,
   with a uv cache keyed on `uv.lock`.

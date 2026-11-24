@@ -30,6 +30,14 @@ runs:
       run: uv run mypy src/assistant
       shell: bash
 
+    - name: Dependency audit (uv audit)
+      # SCA over the exact uv.lock the image installs: native Astral
+      # auditing against the PyPA advisory database, riding the uv cache
+      # the steps above already warmed. Fails the suite on known-vulnerable
+      # pins before any image is built from them.
+      run: uv audit --locked
+      shell: bash
+
     - name: Unit tests (pytest)
       run: uv run pytest -q
       shell: bash

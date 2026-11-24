@@ -1,0 +1,10 @@
+# Local gitleaks tuning: the default ruleset trips on files that are
+# supposed to carry long hex/base64-looking digests.
+title = "Assistant gitleaks allowlist"
+
+[allowlist]
+description = "Lockfiles and OpenTimestamps proofs carry hex digests by design"
+paths = [
+  '''uv\.lock''',
+  '''\.opentimestamps/.*''',
+]
