@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.4.0] - 2026-11-25
+
 ### Added
 - **`uv audit` in the test suite**: native SCA over the exact `uv.lock`
   the image installs (PyPA advisory database) — a known-vulnerable pin
